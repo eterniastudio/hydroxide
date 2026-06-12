@@ -4,6 +4,8 @@ import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
 import net.axther.hydroxide.commands.CompletionUtils;
 import net.axther.hydroxide.modules.HydroModule;
+import net.axther.hydroxide.modules.welcome.PlayerVisualStateOwner;
+import net.axther.hydroxide.modules.welcome.PlayerVisualStateType;
 import net.axther.hydroxide.storage.YamlStore;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -233,6 +235,13 @@ public final class VanishModule implements HydroModule, Listener, CommandExecuto
     }
 
     private void applyChange(Player target, VanishChange change) {
+        if (change.vanishedNow()) {
+            context.services().playerVisualStateService()
+                    .ifPresent(service -> service.claim(target.getUniqueId(), PlayerVisualStateOwner.VANISH, PlayerVisualStateType.VISIBILITY));
+        } else {
+            context.services().playerVisualStateService()
+                    .ifPresent(service -> service.releaseAll(target.getUniqueId(), PlayerVisualStateOwner.VANISH));
+        }
         if (change.restoreVisualState()) {
             restoreNonVanishedVisualState(target);
         }
@@ -275,9 +284,19 @@ public final class VanishModule implements HydroModule, Listener, CommandExecuto
         player.clearTitle();
         player.sendActionBar(Component.empty());
         if (!isVanished(player.getUniqueId())) {
-            player.setInvisible(false);
+            boolean entityInvisibilityOwned = context.services().playerVisualStateService()
+                    .map(service -> service.hasAnyOwner(player.getUniqueId(), PlayerVisualStateType.ENTITY_INVISIBILITY))
+                    .orElse(false);
+            if (!entityInvisibilityOwned) {
+                player.setInvisible(false);
+            }
             if (hydroxideInvisibilityPotions.remove(player.getUniqueId())) {
-                player.removePotionEffect(PotionEffectType.INVISIBILITY);
+                boolean potionInvisibilityOwned = context.services().playerVisualStateService()
+                        .map(service -> service.hasAnyOwner(player.getUniqueId(), PlayerVisualStateType.POTION_INVISIBILITY))
+                        .orElse(false);
+                if (!potionInvisibilityOwned) {
+                    player.removePotionEffect(PotionEffectType.INVISIBILITY);
+                }
             }
         }
     }

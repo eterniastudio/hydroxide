@@ -41,6 +41,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 public final class WelcomeModule implements HydroModule, Listener, PlayerVisualStateService {
@@ -51,6 +52,7 @@ public final class WelcomeModule implements HydroModule, Listener, PlayerVisualS
     private YamlStore store;
     private final Map<UUID, FreezeState> frozen = new HashMap<>();
     private final Map<UUID, List<BukkitTask>> introTasks = new HashMap<>();
+    private final PlayerVisualStateClaimStore visualStateClaims = new PlayerVisualStateClaimStore();
 
     @Override
     public String id() {
@@ -148,6 +150,7 @@ public final class WelcomeModule implements HydroModule, Listener, PlayerVisualS
                     restoreIntroState(player);
                     return;
                 }
+                claim(player.getUniqueId(), PlayerVisualStateOwner.WELCOME_INTRO, PlayerVisualStateType.TITLE);
                 player.showTitle(Title.title(
                     context.text().format(frame.title().replace("{player}", player.getName())),
                     context.text().format(frame.subtitle().replace("{player}", player.getName())),
@@ -176,6 +179,7 @@ public final class WelcomeModule implements HydroModule, Listener, PlayerVisualS
         );
         frozen.put(player.getUniqueId(), state);
         player.setInvulnerable(true);
+        claim(player.getUniqueId(), PlayerVisualStateOwner.WELCOME_INTRO, PlayerVisualStateType.ENTITY_INVISIBILITY);
         player.setInvisible(true);
         addTrackedPotionEffect(player, state, PotionEffectType.BLINDNESS, 120);
         parseLocation(yaml.getString("welcome-screen.cinematic-anchor.anchor-coords"))
@@ -184,23 +188,69 @@ public final class WelcomeModule implements HydroModule, Listener, PlayerVisualS
 
     @Override
     public void restoreIntroState(Player player) {
+        UUID playerId = player.getUniqueId();
         boolean hadIntroTasks = cancelIntroTasks(player.getUniqueId());
         FreezeState state = frozen.remove(player.getUniqueId());
+        Set<PlayerVisualStateType> released = releaseAll(playerId, PlayerVisualStateOwner.WELCOME_INTRO);
         if (state != null) {
             player.setInvulnerable(state.invulnerable());
-            player.setInvisible(state.invisible());
+            if (!hasAnyOwner(playerId, PlayerVisualStateType.ENTITY_INVISIBILITY)) {
+                player.setInvisible(state.invisible());
+            }
             player.setWalkSpeed(state.walkSpeed());
             player.setFlySpeed(state.flySpeed());
             for (PotionEffectType effectType : state.appliedEffects()) {
-                player.removePotionEffect(effectType);
+                PlayerVisualStateType visualStateType = potionVisualStateType(effectType);
+                if (visualStateType != null && released.contains(visualStateType) && !hasAnyOwner(playerId, visualStateType)) {
+                    player.removePotionEffect(effectType);
+                }
             }
         }
         if (state != null || hadIntroTasks) {
             debug("intro cleanup for " + player.getName());
-            player.clearTitle();
-            player.sendActionBar(Component.empty());
+            if (released.contains(PlayerVisualStateType.TITLE) && !hasAnyOwner(playerId, PlayerVisualStateType.TITLE)) {
+                player.clearTitle();
+            }
+            if (released.contains(PlayerVisualStateType.ACTION_BAR) && !hasAnyOwner(playerId, PlayerVisualStateType.ACTION_BAR)) {
+                player.sendActionBar(Component.empty());
+            }
         }
         ensureVisibleUnlessVanished(player);
+    }
+
+    @Override
+    public void claim(UUID playerId, PlayerVisualStateOwner owner, PlayerVisualStateType type) {
+        visualStateClaims.claim(playerId, owner, type);
+    }
+
+    @Override
+    public boolean release(UUID playerId, PlayerVisualStateOwner owner, PlayerVisualStateType type) {
+        return visualStateClaims.release(playerId, owner, type);
+    }
+
+    @Override
+    public Set<PlayerVisualStateType> releaseAll(UUID playerId, PlayerVisualStateOwner owner) {
+        return visualStateClaims.releaseAll(playerId, owner);
+    }
+
+    @Override
+    public Set<PlayerVisualStateType> clearPlayer(UUID playerId) {
+        return visualStateClaims.clearPlayer(playerId);
+    }
+
+    @Override
+    public boolean isOwnedBy(UUID playerId, PlayerVisualStateOwner owner, PlayerVisualStateType type) {
+        return visualStateClaims.isOwnedBy(playerId, owner, type);
+    }
+
+    @Override
+    public boolean hasAnyOwner(UUID playerId, PlayerVisualStateType type) {
+        return visualStateClaims.hasAnyOwner(playerId, type);
+    }
+
+    @Override
+    public Set<PlayerVisualStateOwner> owners(UUID playerId, PlayerVisualStateType type) {
+        return visualStateClaims.owners(playerId, type);
     }
 
     private WelcomeFrameSequence loadSequence(YamlConfiguration yaml) {
@@ -392,7 +442,24 @@ public final class WelcomeModule implements HydroModule, Listener, PlayerVisualS
             return;
         }
         player.addPotionEffect(new PotionEffect(effectType, durationTicks, 0, false, false, false));
+        PlayerVisualStateType visualStateType = potionVisualStateType(effectType);
+        if (visualStateType != null) {
+            claim(player.getUniqueId(), PlayerVisualStateOwner.WELCOME_INTRO, visualStateType);
+        }
         state.appliedEffects().add(effectType);
+    }
+
+    private PlayerVisualStateType potionVisualStateType(PotionEffectType effectType) {
+        if (effectType.equals(PotionEffectType.BLINDNESS)) {
+            return PlayerVisualStateType.POTION_BLINDNESS;
+        }
+        if (effectType.equals(PotionEffectType.DARKNESS)) {
+            return PlayerVisualStateType.POTION_DARKNESS;
+        }
+        if (effectType.equals(PotionEffectType.INVISIBILITY)) {
+            return PlayerVisualStateType.POTION_INVISIBILITY;
+        }
+        return null;
     }
 
     private void trackTask(Player player, BukkitTask task) {
