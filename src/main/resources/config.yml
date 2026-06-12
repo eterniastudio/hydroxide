@@ -1,0 +1,190 @@
+messages:
+  prefix: "<#44CCFF><bold>Hydroxide</bold> <dark_gray>> <gray>"
+  no-permission: "<red>You do not have permission."
+
+modules:
+  core:
+    enabled: true
+  nickname:
+    enabled: true
+  economy:
+    enabled: true
+  placeholderapi:
+    enabled: true
+  chat:
+    enabled: true
+  teleport:
+    enabled: true
+  advanced-spawn:
+    enabled: true
+  welcome:
+    enabled: true
+  navigation:
+    enabled: true
+  jail:
+    enabled: true
+  announcements:
+    enabled: true
+  chat-filter:
+    enabled: true
+  tablist:
+    enabled: true
+  backpacks:
+    enabled: true
+  combat-tag:
+    enabled: true
+  rtp:
+    enabled: true
+  item-editor:
+    enabled: true
+  utility-bindings:
+    enabled: true
+  afk:
+    enabled: true
+  interactions:
+    enabled: true
+  stats:
+    enabled: true
+  redis-bridge:
+    enabled: false
+  api:
+    enabled: false
+  proxy-bridge:
+    enabled: true
+  channels:
+    enabled: true
+  social:
+    enabled: true
+  worlds:
+    enabled: true
+  backups:
+    enabled: true
+  kits:
+    enabled: true
+  shop:
+    enabled: true
+  portals:
+    enabled: true
+  motd:
+    enabled: true
+  builder:
+    enabled: true
+  armor-stands:
+    enabled: true
+  holograms:
+    enabled: true
+  admin-utilities:
+    enabled: true
+  options:
+    enabled: true
+  protection:
+    enabled: true
+  vanish:
+    enabled: true
+  moderation:
+    enabled: true
+
+storage:
+  type: "sqlite"
+  sqlite:
+    file-name: "database.db"
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "hydroxide"
+    username: "root"
+    password: ""
+    use-ssl: false
+  pool:
+    maximum-size: 10
+    minimum-idle: 2
+    connection-timeout-ms: 30000
+    idle-timeout-ms: 600000
+    max-lifetime-ms: 1800000
+
+chat:
+  allow-player-color-codes: true
+  format: "<dark_gray>[<#44CCFF>{world}</#44CCFF>] <white>{name}<dark_gray>: <white>{message}"
+  broadcast-format: "<#FFB000><bold>Broadcast</bold> <dark_gray>> <white>{message}"
+
+teleport:
+  request-timeout-seconds: 120
+
+navigation:
+  default-home-limit: 3
+  max-home-limit: 25
+  warmup-seconds: 3
+
+first-join:
+  title: "<#44CCFF><bold>Welcome</bold>"
+  subtitle: "<gray>Enjoy your stay, <white>{player}<gray>!"
+  firework: true
+  items:
+    - "BREAD:16"
+    - "STONE_SWORD:1"
+
+jail:
+  allowed-commands:
+    - "/help"
+    - "/rules"
+
+announcements:
+  interval-seconds: 180
+
+backpacks:
+  default-slots: 27
+  max-slots: 54
+  max-vaults: 3
+  drop-on-death: false
+
+combat-tag:
+  duration-seconds: 15
+  blocked-commands:
+    - "home"
+    - "spawn"
+    - "warp"
+    - "back"
+    - "tpa"
+    - "tpaccept"
+    - "fly"
+    - "rtp"
+
+rtp:
+  min-radius: 250
+  max-radius: 5000
+  max-attempts: 16
+  cooldown-seconds: 60
+  cost: 0.0
+  fall-immunity-seconds: 5
+
+afk:
+  idle-seconds: 300
+  auto-kick-when-full: false
+
+vanish:
+  enabled: true
+  persist: true
+  auto-vanish-ops: false
+  restore-visibility-on-disable: true
+  staff-can-see: true
+
+debug:
+  visibility: false
+
+redis-bridge:
+  enabled: false
+  server-id: "server"
+  host: "127.0.0.1"
+  port: 6379
+  password: ""
+  channel: "hydroxide:chat"
+
+economy:
+  starting-balance: 100.0
+  currency-symbol: "$"
+  currency-name: "dollars"
+
+nickname:
+  max-length: 16
+  allowed-pattern: "^[A-Za-z0-9_ .-]+$"
+  blacklist: []

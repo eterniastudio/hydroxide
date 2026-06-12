@@ -1,0 +1,597 @@
+name: Hydroxide
+version: '1.0.0'
+main: net.axther.hydroxide.Hydroxide
+api-version: '1.21'
+authors: [ Axther ]
+description: A modern modular Paper server core plugin.
+depend: [ Vault ]
+softdepend: [ PlaceholderAPI ]
+commands:
+  hydroxide:
+    aliases: [ hx, hydrox ]
+    description: Hydroxide administration.
+    usage: /hydroxide [help|modules|reload]
+    permission: hydroxide.command.hydroxide
+  broadcast:
+    aliases: [ bc ]
+    description: Broadcast a formatted server message.
+    usage: /broadcast <message>
+    permission: hydroxide.command.broadcast
+  message:
+    aliases: [ msg, tell, whisper, w ]
+    description: Send a private message.
+    usage: /message <player> <message>
+    permission: hydroxide.command.message
+  reply:
+    aliases: [ r ]
+    description: Reply to your last private message.
+    usage: /reply <message>
+    permission: hydroxide.command.reply
+  spawn:
+    description: Teleport to spawn.
+    usage: /spawn
+    permission: hydroxide.command.spawn
+  setspawn:
+    description: Set the server spawn location.
+    usage: /setspawn
+    permission: hydroxide.command.setspawn
+  home:
+    description: Teleport to a saved home.
+    usage: /home [name]
+    permission: hydroxide.command.home
+  sethome:
+    description: Save a home.
+    usage: /sethome [name]
+    permission: hydroxide.command.sethome
+  delhome:
+    aliases: [ removehome ]
+    description: Delete a saved home.
+    usage: /delhome [name]
+    permission: hydroxide.command.delhome
+  homes:
+    description: List your homes.
+    usage: /homes
+    permission: hydroxide.command.homes
+  warp:
+    description: Teleport to a warp.
+    usage: /warp <name>
+    permission: hydroxide.command.warp
+  setwarp:
+    description: Set a warp.
+    usage: /setwarp <name>
+    permission: hydroxide.command.setwarp
+  delwarp:
+    aliases: [ removewarp ]
+    description: Delete a warp.
+    usage: /delwarp <name>
+    permission: hydroxide.command.delwarp
+  warps:
+    description: List warps.
+    usage: /warps
+    permission: hydroxide.command.warps
+  back:
+    description: Return to your previous teleport location.
+    usage: /back
+    permission: hydroxide.command.back
+  tpa:
+    description: Request to teleport to another player.
+    usage: /tpa <player>
+    permission: hydroxide.command.tpa
+  tpaccept:
+    description: Accept a teleport request.
+    usage: /tpaccept
+    permission: hydroxide.command.tpaccept
+  tpdeny:
+    description: Deny a teleport request.
+    usage: /tpdeny
+    permission: hydroxide.command.tpdeny
+  fly:
+    description: Toggle flight.
+    usage: /fly [player]
+    permission: hydroxide.command.fly
+  god:
+    description: Toggle god mode.
+    usage: /god [player]
+    permission: hydroxide.command.god
+  heal:
+    description: Heal a player.
+    usage: /heal [player]
+    permission: hydroxide.command.heal
+  feed:
+    description: Feed a player.
+    usage: /feed [player]
+    permission: hydroxide.command.feed
+  speed:
+    description: Set walk or fly speed.
+    usage: /speed <1-10> [walk|fly] [player]
+    permission: hydroxide.command.speed
+  gamemode:
+    aliases: [ gm ]
+    description: Set gamemode.
+    usage: /gamemode <mode> [player]
+    permission: hydroxide.command.gamemode
+  nickname:
+    aliases: [ nick ]
+    description: Set or clear a formatted nickname.
+    usage: /nickname [player] <nickname|clear>
+    permission: hydroxide.command.nickname
+  realname:
+    description: Resolve an active nickname to a real username.
+    usage: /realname <nickname>
+    permission: hydroxide.command.realname
+  balance:
+    aliases: [ bal, money ]
+    description: Check your balance or another player's balance.
+    usage: /balance [player]
+    permission: hydroxide.command.balance
+  pay:
+    description: Send money to another player.
+    usage: /pay <player> <amount>
+    permission: hydroxide.command.pay
+  eco:
+    description: Administer Hydroxide economy balances.
+    usage: /eco <give|take|set> <player> <amount>
+    permission: hydroxide.command.eco
+  groupspawn:
+    description: Manage permission and Vault group spawn points.
+    usage: /groupspawn <set|delete> <group> [priority]
+    permission: hydroxide.command.groupspawn
+  homesgui:
+    aliases: [ homegui ]
+    description: Open the home navigation menu.
+    usage: /homesgui
+    permission: hydroxide.command.homesgui
+  warpgui:
+    aliases: [ warpsgui, warpmenu ]
+    description: Open the warp navigation menu.
+    usage: /warpgui
+    permission: hydroxide.command.warpgui
+  setjail:
+    description: Set a jail location.
+    usage: /setjail <name>
+    permission: hydroxide.command.setjail
+  jail:
+    description: Jail a player for a duration.
+    usage: /jail <player> <jail> <duration> [reason]
+    permission: hydroxide.command.jail
+  unjail:
+    description: Release a jailed player.
+    usage: /unjail <player>
+    permission: hydroxide.command.unjail
+  kit:
+    description: Claim or preview a kit.
+    usage: /kit <name>
+    permission: hydroxide.command.kit
+  kits:
+    description: Open the kit menu.
+    usage: /kits
+    permission: hydroxide.command.kits
+  setkit:
+    description: Create a kit from your inventory.
+    usage: /setkit <name> [cooldown]
+    permission: hydroxide.command.setkit
+  shop:
+    description: Open the Hydroxide shop menu.
+    usage: /shop
+    permission: hydroxide.command.shop
+  portal:
+    description: Manage coordinate portals.
+    usage: /portal <create|delete> <name> ...
+    permission: hydroxide.command.portal
+  lock:
+    description: Lock a container or door.
+    usage: /lock
+    permission: hydroxide.command.lock
+  unlock:
+    description: Unlock a container or door.
+    usage: /unlock
+    permission: hydroxide.command.unlock
+  vanish:
+    aliases: [ v ]
+    description: Toggle vanish for yourself or another player.
+    usage: /vanish [player]
+    permission: hydroxide.command.vanish
+  backpack:
+    aliases: [ bp ]
+    description: Open your portable backpack.
+    usage: /backpack
+    permission: hydroxide.command.backpack
+  pv:
+    aliases: [ playervault ]
+    description: Open a numbered portable vault.
+    usage: /pv [number]
+    permission: hydroxide.command.pv
+  rtp:
+    description: Randomly teleport to a safe location.
+    usage: /rtp
+    permission: hydroxide.command.rtp
+  item:
+    description: Edit the item in your main hand.
+    usage: /item <name|lore|model|attribute> ...
+    permission: hydroxide.command.item
+  bindcommand:
+    description: Bind a command to the next interacted block.
+    usage: /bindcommand <console|player> <cost> <cooldown> <command>
+    permission: hydroxide.command.bindcommand
+  bindentity:
+    description: Bind a command to a nearby entity.
+    usage: /bindentity <console|player> <cost> <cooldown> <command>
+    permission: hydroxide.command.bindcommand
+  top:
+    description: Show the top players for a statistic.
+    usage: /top [stat]
+    permission: hydroxide.command.top
+  server:
+    description: Connect to another proxy server.
+    usage: /server <name>
+    permission: hydroxide.command.server
+  networkalert:
+    aliases: [ galert ]
+    description: Broadcast an alert across the proxy network.
+    usage: /networkalert <message>
+    permission: hydroxide.command.networkalert
+  channel:
+    aliases: [ ch ]
+    description: Focus or send to a chat channel.
+    usage: /channel <channel> [message]
+    permission: hydroxide.command.channel
+  g:
+    description: Send a one-off global chat message.
+    usage: /g <message>
+    permission: hydroxide.command.channel
+  l:
+    description: Send a one-off local chat message.
+    usage: /l <message>
+    permission: hydroxide.command.channel
+  sc:
+    description: Send a one-off staff chat message.
+    usage: /sc <message>
+    permission: hydroxide.channel.staff
+  trade:
+    description: Send a one-off trade chat message.
+    usage: /trade <message>
+    permission: hydroxide.channel.trade
+  party:
+    aliases: [ partychat ]
+    description: Manage your party.
+    usage: /party <invite|accept|leave|ff|chat> ...
+    permission: hydroxide.command.party
+  p:
+    description: Send a party chat message.
+    usage: /p <message>
+    permission: hydroxide.command.party
+  friend:
+    aliases: [ friends ]
+    description: Manage your friend list.
+    usage: /friend <add|remove|list> <player>
+    permission: hydroxide.command.friend
+  hydroworld:
+    aliases: [ hxworld, hworld ]
+    description: Manage Hydroxide worlds.
+    usage: /hydroworld <create|load|unload|delete|setrule|list> ...
+    permission: hydroxide.command.hydroworld
+  backup:
+    aliases: [ hxbackup ]
+    description: Start a Hydroxide hot backup.
+    usage: /backup
+    permission: hydroxide.command.backup
+  build:
+    aliases: [ builder ]
+    description: Toggle builder mode.
+    usage: /build [player] [on|off|toggle] or /build toggle <toggle> [on|off]
+    permission: hydroxide.builder.mode
+  buildstatus:
+    description: Show builder mode and edit toggles.
+    usage: /buildstatus [player]
+    permission: hydroxide.builder.mode
+  breaktoggle:
+    description: Toggle block breaking while in builder mode.
+    usage: /breaktoggle
+    permission: hydroxide.builder.mode
+  placetoggle:
+    description: Toggle block placing while in builder mode.
+    usage: /placetoggle
+    permission: hydroxide.builder.mode
+  pickblock:
+    description: Copy the targeted block into your inventory.
+    usage: /pickblock
+    permission: hydroxide.builder.pickblock
+  wand:
+    description: Give a Hydroxide selection wand.
+    usage: /wand
+    permission: hydroxide.builder.wand
+  pos1:
+    description: Set builder selection position one.
+    usage: /pos1
+    permission: hydroxide.builder.selection
+  pos2:
+    description: Set builder selection position two.
+    usage: /pos2
+    permission: hydroxide.builder.selection
+  sel:
+    description: Manage your builder selection.
+    usage: /sel <clear|expand|contract|info>
+    permission: hydroxide.builder.selection
+  setblockarea:
+    aliases: [ setarea ]
+    description: Fill the selected cuboid with a block.
+    usage: /setblockarea <block>
+    permission: hydroxide.builder.edit
+  replacearea:
+    aliases: [ replaceblocks ]
+    description: Replace blocks in the selected cuboid.
+    usage: /replacearea <from> <to>
+    permission: hydroxide.builder.edit
+  walls:
+    description: Build walls around the selected cuboid.
+    usage: /walls <block>
+    permission: hydroxide.builder.edit
+  hollow:
+    description: Build a hollow shell in the selected cuboid.
+    usage: /hollow <block>
+    permission: hydroxide.builder.edit
+  copyarea:
+    description: Copy the selected cuboid.
+    usage: /copyarea
+    permission: hydroxide.builder.copy
+  pastearea:
+    description: Paste your copied cuboid at your feet.
+    usage: /pastearea
+    permission: hydroxide.builder.paste
+  undo:
+    description: Undo recent Hydroxide builder edits.
+    usage: /undo [steps]
+    permission: hydroxide.builder.undo
+  redo:
+    description: Redo recent Hydroxide builder edits.
+    usage: /redo [steps]
+    permission: hydroxide.builder.redo
+  brush:
+    description: Bind a builder brush to your held item.
+    usage: /brush <sphere|cylinder|replace|smooth|none> ...
+    permission: hydroxide.builder.brush
+  fillnear:
+    description: Fill nearby air blocks with a material.
+    usage: /fillnear <block> <radius>
+    permission: hydroxide.builder.brush
+  drainnear:
+    description: Drain nearby water and lava.
+    usage: /drainnear [radius]
+    permission: hydroxide.builder.brush
+  fixlight:
+    description: Queue a nearby light refresh hint.
+    usage: /fixlight [radius]
+    permission: hydroxide.builder.brush
+  armorstand:
+    aliases: [ asedit ]
+    description: Edit a targeted armor stand.
+    usage: /armorstand <action> ...
+    permission: hydroxide.armorstand.edit
+  holo:
+    aliases: [ hologram, holograms ]
+    description: Manage text, item, and block display holograms.
+    usage: /holo <create|delete|line|movehere|clone|list|near> ...
+    permission: hydroxide.holo.admin
+  signedit:
+    description: Edit the targeted sign.
+    usage: /signedit <line> <text>
+    permission: hydroxide.item.sign
+  signcopy:
+    description: Copy the targeted sign text.
+    usage: /signcopy
+    permission: hydroxide.item.sign
+  signpaste:
+    description: Paste copied sign text to the targeted sign.
+    usage: /signpaste
+    permission: hydroxide.item.sign
+  signglow:
+    description: Toggle glowing sign text with an optional dye color.
+    usage: /signglow [color]
+    permission: hydroxide.item.sign
+  bookedit:
+    description: Edit a written or writable book page.
+    usage: /bookedit <page> <text>
+    permission: hydroxide.item.edit
+  itemname:
+    description: Set the held item display name.
+    usage: /itemname <text>
+    permission: hydroxide.item.edit
+  itemlore:
+    description: Edit held item lore.
+    usage: /itemlore <add|set|remove|clear> ...
+    permission: hydroxide.item.edit
+  itemflag:
+    description: Add or remove held item flags.
+    usage: /itemflag <add|remove> <flag>
+    permission: hydroxide.item.edit
+  itemenchant:
+    description: Add or remove held item enchantments.
+    usage: /itemenchant <add|remove> <enchantment> [level]
+    permission: hydroxide.item.edit
+  itemrepair:
+    description: Repair the held item.
+    usage: /itemrepair
+    permission: hydroxide.item.edit
+  itemcopy:
+    description: Copy the held item.
+    usage: /itemcopy
+    permission: hydroxide.item.edit
+  itempaste:
+    description: Paste the copied item.
+    usage: /itempaste
+    permission: hydroxide.item.edit
+  attachcommand:
+    description: Attach a command to the held item.
+    usage: /attachcommand <left|right> <player|console> <uses|infinite> <command...>
+    permission: hydroxide.item.attach
+  invsee:
+    description: Inspect an online player's inventory.
+    usage: /invsee <player>
+    permission: hydroxide.admin.invsee
+  endersee:
+    description: Inspect an online player's ender chest.
+    usage: /endersee <player>
+    permission: hydroxide.admin.endersee
+  trash:
+    description: Open a disposable trash inventory.
+    usage: /trash
+    permission: hydroxide.admin.trash
+  workbench:
+    description: Open a virtual crafting table.
+    usage: /workbench
+    permission: hydroxide.admin.workbench
+  anvil:
+    description: Open a virtual anvil.
+    usage: /anvil
+    permission: hydroxide.admin.anvil
+  cartography:
+    description: Open a virtual cartography table.
+    usage: /cartography
+    permission: hydroxide.admin.cartography
+  smithing:
+    description: Open a virtual smithing table.
+    usage: /smithing
+    permission: hydroxide.admin.smithing
+  stonecutter:
+    description: Open a virtual stonecutter.
+    usage: /stonecutter
+    permission: hydroxide.admin.stonecutter
+  near:
+    description: List nearby online players.
+    usage: /near [radius]
+    permission: hydroxide.admin.near
+  seen:
+    description: Show the last seen time for a player.
+    usage: /seen <player>
+    permission: hydroxide.admin.seen
+  whois:
+    description: Show stored identity and location details.
+    usage: /whois <player>
+    permission: hydroxide.admin.whois
+  sudo:
+    description: Force a player to chat or run a command.
+    usage: /sudo <player> <chat|command> <value>
+    permission: hydroxide.admin.sudo
+  staffnote:
+    description: Add, list, or clear staff notes.
+    usage: /staffnote <player> <add|list|clear> [note]
+    permission: hydroxide.admin.staffnote
+  options:
+    description: Open personal Hydroxide options.
+    usage: /options [option] [on|off]
+    permission: hydroxide.command.options
+permissions:
+  hydroxide.admin:
+    description: Full Hydroxide administration access.
+    default: op
+    children:
+      hydroxide.command.hydroxide: true
+      hydroxide.command.reload: true
+      hydroxide.command.broadcast: true
+      hydroxide.command.setspawn: true
+      hydroxide.command.setwarp: true
+      hydroxide.command.delwarp: true
+      hydroxide.command.fly: true
+      hydroxide.command.god: true
+      hydroxide.command.heal: true
+      hydroxide.command.feed: true
+      hydroxide.command.speed: true
+      hydroxide.command.gamemode: true
+      hydroxide.command.nickname.others: true
+      hydroxide.command.realname: true
+      hydroxide.command.balance.others: true
+      hydroxide.command.eco: true
+      hydroxide.command.groupspawn: true
+      hydroxide.command.setjail: true
+      hydroxide.command.jail: true
+      hydroxide.command.unjail: true
+      hydroxide.command.setkit: true
+      hydroxide.command.shop.admin: true
+      hydroxide.command.portal: true
+      hydroxide.command.vanish: true
+      hydroxide.command.item: true
+      hydroxide.command.bindcommand: true
+      hydroxide.command.networkalert: true
+      hydroxide.command.hydroworld: true
+      hydroxide.command.backup: true
+      hydroxide.builder.mode: true
+      hydroxide.builder.mode.others: true
+      hydroxide.builder.pickblock: true
+      hydroxide.builder.wand: true
+      hydroxide.builder.selection: true
+      hydroxide.builder.edit: true
+      hydroxide.builder.copy: true
+      hydroxide.builder.paste: true
+      hydroxide.builder.undo: true
+      hydroxide.builder.redo: true
+      hydroxide.builder.brush: true
+      hydroxide.builder.bypass: true
+      hydroxide.armorstand.edit: true
+      hydroxide.armorstand.bypass: true
+      hydroxide.holo.admin: true
+      hydroxide.item.sign: true
+      hydroxide.item.edit: true
+      hydroxide.item.attach: true
+      hydroxide.item.attach.console: true
+      hydroxide.admin.invsee: true
+      hydroxide.admin.endersee: true
+      hydroxide.admin.trash: true
+      hydroxide.admin.workbench: true
+      hydroxide.admin.anvil: true
+      hydroxide.admin.cartography: true
+      hydroxide.admin.smithing: true
+      hydroxide.admin.stonecutter: true
+      hydroxide.admin.near: true
+      hydroxide.admin.seen: true
+      hydroxide.admin.whois: true
+      hydroxide.admin.ip: true
+      hydroxide.admin.sudo: true
+      hydroxide.admin.staffnote: true
+      hydroxide.command.options: true
+      hydroxide.channel.staff: true
+      hydroxide.lock.bypass: true
+      hydroxide.vanish.see: true
+      hydroxide.chat.color: true
+      hydroxide.nickname.color: true
+      hydroxide.nickname.hex: true
+      hydroxide.nickname.gradient: true
+      hydroxide.nickname.rainbow: true
+  hydroxide.player:
+    description: Common player-facing Hydroxide commands.
+    default: true
+    children:
+      hydroxide.command.hydroxide: true
+      hydroxide.command.message: true
+      hydroxide.command.reply: true
+      hydroxide.command.spawn: true
+      hydroxide.command.home: true
+      hydroxide.command.sethome: true
+      hydroxide.command.delhome: true
+      hydroxide.command.homes: true
+      hydroxide.command.warp: true
+      hydroxide.command.warps: true
+      hydroxide.command.back: true
+      hydroxide.command.tpa: true
+      hydroxide.command.tpaccept: true
+      hydroxide.command.tpdeny: true
+      hydroxide.command.nickname: true
+      hydroxide.command.realname: true
+      hydroxide.command.balance: true
+      hydroxide.command.pay: true
+      hydroxide.command.homesgui: true
+      hydroxide.command.warpgui: true
+      hydroxide.command.kit: true
+      hydroxide.command.kits: true
+      hydroxide.command.shop: true
+      hydroxide.command.lock: true
+      hydroxide.command.unlock: true
+      hydroxide.command.backpack: true
+      hydroxide.command.pv: true
+      hydroxide.command.rtp: true
+      hydroxide.command.top: true
+      hydroxide.command.server: true
+      hydroxide.command.channel: true
+      hydroxide.command.party: true
+      hydroxide.command.friend: true
+      hydroxide.command.options: true
+      hydroxide.channel.trade: true
