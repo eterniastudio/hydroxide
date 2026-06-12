@@ -188,8 +188,8 @@ commands:
     permission: hydroxide.command.unlock
   vanish:
     aliases: [ v ]
-    description: Toggle vanish for yourself or another player.
-    usage: /vanish [player]
+    description: Toggle vanish or repair player visibility.
+    usage: /vanish [player|status [player]|fix [player]]
     permission: hydroxide.command.vanish
   backpack:
     aliases: [ bp ]
