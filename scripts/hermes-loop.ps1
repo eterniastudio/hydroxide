@@ -11,7 +11,7 @@ $ErrorActionPreference = "Stop"
 if ($MaxTasksPerRun -le 0) { if ($env:HERMES_MAX_TASKS_PER_RUN) { $MaxTasksPerRun = [int]$env:HERMES_MAX_TASKS_PER_RUN } else { $MaxTasksPerRun = 1 } }
 if ($MaxMinutesPerRun -le 0) { if ($env:HERMES_MAX_MINUTES_PER_RUN) { $MaxMinutesPerRun = [int]$env:HERMES_MAX_MINUTES_PER_RUN } else { $MaxMinutesPerRun = 45 } }
 if ([string]::IsNullOrWhiteSpace($AllowCommits)) { if ($env:HERMES_ALLOW_COMMITS) { $AllowCommits = $env:HERMES_ALLOW_COMMITS } else { $AllowCommits = "true" } }
-if ([string]::IsNullOrWhiteSpace($AllowPush)) { if ($env:HERMES_ALLOW_PUSH) { $AllowPush = $env:HERMES_ALLOW_PUSH } else { $AllowPush = "false" } }
+if ([string]::IsNullOrWhiteSpace($AllowPush)) { if ($env:HERMES_ALLOW_PUSH) { $AllowPush = $env:HERMES_ALLOW_PUSH } else { $AllowPush = "true" } }
 if ([string]::IsNullOrWhiteSpace($FullBuildEveryRun)) { if ($env:HERMES_FULL_BUILD_EVERY_RUN) { $FullBuildEveryRun = $env:HERMES_FULL_BUILD_EVERY_RUN } else { $FullBuildEveryRun = "true" } }
 
 $AllowCommitsBool = [System.Convert]::ToBoolean($AllowCommits)
@@ -70,7 +70,7 @@ while ($tasksCompleted -lt $MaxTasksPerRun -and (Get-Date) -lt $Deadline) {
     git switch -c $branch 2>$null
     if ($LASTEXITCODE -ne 0) { git switch $branch }
 
-    $prompt = "You are Hermes running a bounded Hydroxide autonomous task. Repo: " + $Repo + ". Read docs/hermes/BACKLOG.md and implement exactly one small safe slice for " + $taskId + ". Follow TDD where practical. Preserve existing architecture. Do not push. Run focused tests and full verification if production code changes. Update docs/hermes/RUN_LOG.md. Commit only if tests pass and HERMES_ALLOW_COMMITS=" + $AllowCommitsBool + "."
+    $prompt = "You are Hermes running a bounded Hydroxide autonomous task. Repo: " + $Repo + ". Read docs/hermes/BACKLOG.md and implement exactly one small safe slice for " + $taskId + ". Follow TDD where practical. Preserve existing architecture. Push only if HERMES_ALLOW_PUSH=true. Run focused tests and full verification if production code changes. Update docs/hermes/RUN_LOG.md. Commit only if tests pass and HERMES_ALLOW_COMMITS=" + $AllowCommitsBool + "."
     hermes chat -q $prompt
 
     if ($FullBuildEveryRunBool) {

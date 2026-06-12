@@ -7,7 +7,7 @@ cd "$REPO"
 HERMES_MAX_TASKS_PER_RUN="${HERMES_MAX_TASKS_PER_RUN:-1}"
 HERMES_MAX_MINUTES_PER_RUN="${HERMES_MAX_MINUTES_PER_RUN:-45}"
 HERMES_ALLOW_COMMITS="${HERMES_ALLOW_COMMITS:-true}"
-HERMES_ALLOW_PUSH="${HERMES_ALLOW_PUSH:-false}"
+HERMES_ALLOW_PUSH="${HERMES_ALLOW_PUSH:-true}"
 HERMES_FULL_BUILD_EVERY_RUN="${HERMES_FULL_BUILD_EVERY_RUN:-true}"
 RUN_LOG="$REPO/docs/hermes/RUN_LOG.md"
 START_EPOCH="$(date +%s)"
@@ -54,7 +54,7 @@ while [ "$tasks_completed" -lt "$HERMES_MAX_TASKS_PER_RUN" ] && [ "$(date +%s)" 
   git switch main
   git switch -c "$branch" 2>/dev/null || git switch "$branch"
 
-  prompt="You are Hermes running a bounded Hydroxide autonomous task. Repo: $REPO. Read docs/hermes/BACKLOG.md and implement exactly one small safe slice for $task_id. Follow TDD where practical. Preserve existing architecture. Do not push. Run focused tests and full verification if production code changes. Update docs/hermes/RUN_LOG.md. Commit only if tests pass and HERMES_ALLOW_COMMITS=$HERMES_ALLOW_COMMITS."
+  prompt="You are Hermes running a bounded Hydroxide autonomous task. Repo: $REPO. Read docs/hermes/BACKLOG.md and implement exactly one small safe slice for $task_id. Follow TDD where practical. Preserve existing architecture. Push only if HERMES_ALLOW_PUSH=true. Run focused tests and full verification if production code changes. Update docs/hermes/RUN_LOG.md. Commit only if tests pass and HERMES_ALLOW_COMMITS=$HERMES_ALLOW_COMMITS."
   hermes chat -q "$prompt"
 
   if [ "$HERMES_FULL_BUILD_EVERY_RUN" = "true" ]; then
