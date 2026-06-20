@@ -39,13 +39,14 @@ public final class HydroxidePlaceholderExpansion extends PlaceholderExpansion {
         if (player == null) {
             return "";
         }
-        if (params.toLowerCase(java.util.Locale.ROOT).startsWith("stat_")) {
+        String lowered = params.toLowerCase(java.util.Locale.ROOT);
+        if (lowered.startsWith("stat_")) {
             String stat = params.substring("stat_".length());
             return context.services().statsService()
                     .map(service -> String.valueOf(service.value(player.getUniqueId(), stat)))
                     .orElse("0");
         }
-        if (params.toLowerCase(java.util.Locale.ROOT).startsWith("option_")) {
+        if (lowered.startsWith("option_")) {
             PlayerOption option = PlayerOption.fromKey(params.substring("option_".length()));
             if (option == null) {
                 return "";
@@ -54,8 +55,20 @@ public final class HydroxidePlaceholderExpansion extends PlaceholderExpansion {
                     .map(service -> service.enabled(player.getUniqueId(), option) ? "true" : "false")
                     .orElse(String.valueOf(option.defaultValue()));
         }
+        if (lowered.startsWith("user_metaint_")) {
+            String key = params.substring("user_metaint_".length());
+            return context.services().userMetaService()
+                    .flatMap(service -> service.integerValue(player.getUniqueId(), key))
+                    .orElse("");
+        }
+        if (lowered.startsWith("user_meta_")) {
+            String key = params.substring("user_meta_".length());
+            return context.services().userMetaService()
+                    .flatMap(service -> service.value(player.getUniqueId(), key))
+                    .orElse("");
+        }
 
-        return switch (params.toLowerCase(java.util.Locale.ROOT)) {
+        return switch (lowered) {
             case "nickname" -> context.services().nicknameService()
                     .map(service -> service.legacyFormattedNickname(player.getUniqueId(), fallbackName(player)))
                     .orElse(fallbackName(player));

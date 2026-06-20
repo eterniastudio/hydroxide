@@ -1,13 +1,12 @@
 package net.axther.hydroxide.modules.backup;
 
 import net.axther.hydroxide.HydroxideContext;
-import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.YamlStore;
 import org.bukkit.Bukkit;
 import org.bukkit.World;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.scheduler.BukkitTask;
@@ -22,10 +21,11 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-public final class BackupModule implements HydroModule, CommandExecutor {
+public final class BackupModule implements HydroModule {
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss").withZone(ZoneOffset.UTC);
 
@@ -58,7 +58,7 @@ public final class BackupModule implements HydroModule, CommandExecutor {
         this.context = context;
         this.store = new YamlStore(new File(context.plugin().getDataFolder(), "backups.yml"));
         seedDefaults();
-        context.commands().register("backup", this);
+        context.commands().register("backup", backupCommand());
         long intervalMinutes = store.load().getLong("interval-minutes", 360L);
         if (intervalMinutes > 0) {
             task = Bukkit.getScheduler().runTaskTimer(context.plugin(), () -> runBackup(null), 20L * 60L, intervalMinutes * 60L * 20L);
@@ -72,13 +72,12 @@ public final class BackupModule implements HydroModule, CommandExecutor {
         }
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.backup")) {
-            return true;
-        }
-        runBackup(sender);
-        return true;
+    private CommandService backupCommand() {
+        return new CommandService(HydroCommand.builder("backup")
+                .permission("hydroxide.command.backup")
+                .usage("/{label}")
+                .executor(ctx -> runBackup(ctx.sender()))
+                .build(), context.messages());
     }
 
     private void runBackup(CommandSender requester) {
@@ -86,19 +85,22 @@ public final class BackupModule implements HydroModule, CommandExecutor {
             world.save();
         }
         if (requester != null) {
-            context.send(requester, "<green>Backup started asynchronously.");
+            context.message(requester, "backups.started", Map.of());
         }
         Bukkit.getScheduler().runTaskAsynchronously(context.plugin(), () -> {
             try {
                 File backup = createZip();
                 rotate();
                 if (requester != null) {
-                    Bukkit.getScheduler().runTask(context.plugin(), () -> context.send(requester, "<green>Backup complete: <white>" + backup.getName()));
+                    Bukkit.getScheduler().runTask(context.plugin(), () -> context.message(requester, "backups.completed",
+                            Map.of("file", backup.getName())));
                 }
             } catch (IOException exception) {
-                context.plugin().getLogger().warning("Backup failed: " + exception.getMessage());
+                context.plugin().getLogger().warning(context.text().plain(context.messages().component("backups.failed-log",
+                        Map.of("reason", exception.getMessage()))));
                 if (requester != null) {
-                    Bukkit.getScheduler().runTask(context.plugin(), () -> context.send(requester, "<red>Backup failed: <white>" + exception.getMessage()));
+                    Bukkit.getScheduler().runTask(context.plugin(), () -> context.message(requester, "backups.failed",
+                            Map.of("reason", exception.getMessage())));
                 }
             }
         });

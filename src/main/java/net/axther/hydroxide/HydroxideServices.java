@@ -6,6 +6,7 @@ import net.axther.hydroxide.modules.nickname.NicknameService;
 import net.axther.hydroxide.modules.options.PlayerOptionsService;
 import net.axther.hydroxide.modules.staff.VanishService;
 import net.axther.hydroxide.modules.stats.StatsService;
+import net.axther.hydroxide.modules.usermeta.UserMetaService;
 import net.axther.hydroxide.modules.welcome.PlayerVisualStateService;
 
 import java.util.Optional;
@@ -19,6 +20,7 @@ public final class HydroxideServices {
     private PlayerVisualStateService playerVisualStateService;
     private BuilderService builderService;
     private PlayerOptionsService playerOptionsService;
+    private UserMetaService userMetaService;
 
     public Optional<NicknameService> nicknameService() {
         return Optional.ofNullable(nicknameService);
@@ -115,6 +117,20 @@ public final class HydroxideServices {
     public void clearPlayerOptionsService(PlayerOptionsService playerOptionsService) {
         if (this.playerOptionsService == playerOptionsService) {
             this.playerOptionsService = null;
+        }
+    }
+
+    public Optional<UserMetaService> userMetaService() {
+        return Optional.ofNullable(userMetaService);
+    }
+
+    public void userMetaService(UserMetaService userMetaService) {
+        this.userMetaService = userMetaService;
+    }
+
+    public void clearUserMetaService(UserMetaService userMetaService) {
+        if (this.userMetaService == userMetaService) {
+            this.userMetaService = null;
         }
     }
 }

@@ -19,4 +19,8 @@ public final class BackLocationService {
     public Optional<StoredLocation> previous(UUID playerId) {
         return Optional.ofNullable(previousLocations.get(playerId));
     }
+
+    public boolean forget(UUID playerId) {
+        return previousLocations.remove(playerId) != null;
+    }
 }

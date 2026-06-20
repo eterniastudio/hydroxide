@@ -59,6 +59,13 @@ public final class TextFormatter {
         return plainText.serialize(component == null ? Component.empty() : component);
     }
 
+    public String literal(String input) {
+        if (input == null || input.isBlank()) {
+            return "";
+        }
+        return input.replace("&", "&&").replace("<", "\\<");
+    }
+
     public String normalizeLegacySyntax(String input) {
         StringBuilder builder = new StringBuilder(input.length());
         for (int index = 0; index < input.length(); index++) {

@@ -6,6 +6,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public final class StaffNoteStore {
@@ -32,6 +33,24 @@ public final class StaffNoteStore {
 
     public void clear(UUID playerId) {
         yaml.set(path(playerId), null);
+    }
+
+    public Optional<String> remove(UUID playerId, int oneBasedIndex) {
+        if (oneBasedIndex < 1) {
+            return Optional.empty();
+        }
+        List<String> notes = new ArrayList<>(yaml.getStringList(path(playerId)));
+        int index = oneBasedIndex - 1;
+        if (index >= notes.size()) {
+            return Optional.empty();
+        }
+        String removed = notes.remove(index);
+        if (notes.isEmpty()) {
+            clear(playerId);
+        } else {
+            yaml.set(path(playerId), notes);
+        }
+        return Optional.of(removed);
     }
 
     private String path(UUID playerId) {

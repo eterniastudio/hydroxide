@@ -2,6 +2,9 @@ package net.axther.hydroxide.modules.item;
 
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandContext;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.registry.ModernRegistryKeys;
 import org.bukkit.Material;
@@ -9,10 +12,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeModifier;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.components.CustomModelDataComponent;
@@ -21,8 +20,9 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
-public final class ItemEditorModule implements HydroModule, CommandExecutor, TabCompleter {
+public final class ItemEditorModule implements HydroModule {
 
     private static final List<String> SUBCOMMANDS = List.of("attribute", "lore", "model", "name");
     private static final List<String> LORE_ACTIONS = List.of("add", "remove", "set");
@@ -53,27 +53,28 @@ public final class ItemEditorModule implements HydroModule, CommandExecutor, Tab
     @Override
     public void onEnable(HydroxideContext context) {
         this.context = context;
-        context.commands().register("item", this);
+        context.commands().register("item", itemCommand());
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.item")) {
-            return true;
-        }
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can edit held items.");
-            return true;
-        }
+    private CommandService itemCommand() {
+        return new CommandService(HydroCommand.builder("item")
+                .permission("hydroxide.command.item")
+                .playerOnly(true)
+                .usage("/{label} <name|lore|model|attribute> ...")
+                .executor(ctx -> item((Player) ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(this::itemCompletions)
+                .build(), context.messages());
+    }
+
+    private void item(Player player, String label, String[] args) {
         if (args.length < 2) {
-            context.send(sender, "<red>Usage: /" + label + " <name|lore|model|attribute> ...");
-            return true;
+            usage(player, label);
+            return;
         }
         ItemStack item = player.getInventory().getItemInMainHand();
         if (item.getType() == Material.AIR) {
-            context.send(sender, "<red>Hold an item first.");
-            return true;
+            context.message(player, "item.hold-required", Map.of());
+            return;
         }
         ItemMeta meta = item.getItemMeta();
         boolean changed = switch (args[0].toLowerCase(Locale.ROOT)) {
@@ -84,43 +85,45 @@ public final class ItemEditorModule implements HydroModule, CommandExecutor, Tab
             default -> false;
         };
         if (!changed) {
-            context.send(sender, "<red>Usage: /" + label + " <name|lore|model|attribute> ...");
-            return true;
+            usage(player, label);
+            return;
         }
         item.setItemMeta(meta);
-        context.send(sender, "<green>Updated held item.");
-        return true;
+        context.message(player, "item.updated", Map.of());
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return CommandUtils.matching(args[0], SUBCOMMANDS);
+    private List<String> itemCompletions(CommandContext ctx) {
+        if (ctx.arguments().size() == 1) {
+            return CommandUtils.matching(ctx.argument(0), SUBCOMMANDS);
         }
-        String subcommand = args[0].toLowerCase(Locale.ROOT);
+        String subcommand = ctx.argument(0).toLowerCase(Locale.ROOT);
         if (subcommand.equals("lore")) {
-            if (args.length == 2) {
-                return CommandUtils.matching(args[1], LORE_ACTIONS);
+            if (ctx.arguments().size() == 2) {
+                return CommandUtils.matching(ctx.argument(1), LORE_ACTIONS);
             }
-            if ((args[1].equalsIgnoreCase("set") || args[1].equalsIgnoreCase("remove")) && args.length == 3) {
-                return net.axther.hydroxide.commands.CompletionUtils.integerRange(args[2], 1, 20);
+            if ((ctx.argument(1).equalsIgnoreCase("set") || ctx.argument(1).equalsIgnoreCase("remove")) && ctx.arguments().size() == 3) {
+                return net.axther.hydroxide.commands.CompletionUtils.integerRange(ctx.argument(2), 1, 20);
             }
         }
         if (subcommand.equals("attribute")) {
-            if (args.length == 2) {
-                return CommandUtils.matching(args[1], ATTRIBUTE_ACTIONS);
+            if (ctx.arguments().size() == 2) {
+                return CommandUtils.matching(ctx.argument(1), ATTRIBUTE_ACTIONS);
             }
-            if (args.length == 3) {
-                return CommandUtils.matching(args[2], Registry.ATTRIBUTE.keyStream().map(NamespacedKey::getKey).toList());
+            if (ctx.arguments().size() == 3) {
+                return CommandUtils.matching(ctx.argument(2), Registry.ATTRIBUTE.keyStream().map(NamespacedKey::getKey).toList());
             }
-            if (args.length == 4 && args[1].equalsIgnoreCase("add")) {
-                return CommandUtils.matching(args[3], List.of("0", "1", "2", "5", "10", "-1"));
+            if (ctx.arguments().size() == 4 && ctx.argument(1).equalsIgnoreCase("add")) {
+                return CommandUtils.matching(ctx.argument(3), List.of("0", "1", "2", "5", "10", "-1"));
             }
         }
-        if (subcommand.equals("model") && args.length == 2) {
-            return CommandUtils.matching(args[1], List.of("0", "1", "1000", "10000"));
+        if (subcommand.equals("model") && ctx.arguments().size() == 2) {
+            return CommandUtils.matching(ctx.argument(1), List.of("0", "1", "1000", "10000"));
         }
         return List.of();
+    }
+
+    private void usage(Player player, String label) {
+        context.message(player, "item.usage", Map.of("label", label));
     }
 
     private boolean name(ItemMeta meta, String[] args) {

@@ -2,17 +2,18 @@ package net.axther.hydroxide.modules.jail;
 
 import io.papermc.paper.event.player.AsyncChatEvent;
 import net.axther.hydroxide.HydroxideContext;
+import net.axther.hydroxide.commands.CompletionUtils;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandContext;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.StoredLocation;
 import net.axther.hydroxide.storage.YamlStore;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -28,14 +29,16 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.io.File;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-public final class JailModule implements HydroModule, Listener, CommandExecutor, TabCompleter {
+public final class JailModule implements HydroModule, Listener {
 
     private HydroxideContext context;
     private YamlStore jailStore;
@@ -70,9 +73,12 @@ public final class JailModule implements HydroModule, Listener, CommandExecutor,
         this.punishmentStore = new YamlStore(new File(context.plugin().getDataFolder(), "punishments.yml"));
         loadSentences();
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("setjail", this);
-        context.commands().register("jail", this);
-        context.commands().register("unjail", this);
+        context.commands().register("setjail", setJailCommand());
+        context.commands().register("jail", jailCommand());
+        context.commands().register("togglejail", toggleJailCommand());
+        context.commands().register("unjail", unjailCommand());
+        context.commands().register("jails", jailsCommand());
+        context.commands().register("deljail", deleteJailCommand());
         releaseTask = Bukkit.getScheduler().runTaskTimer(context.plugin(), this::releaseExpired, 20L, 20L);
     }
 
@@ -85,36 +91,86 @@ public final class JailModule implements HydroModule, Listener, CommandExecutor,
         saveSentences();
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        return switch (command.getName().toLowerCase(java.util.Locale.ROOT)) {
-            case "setjail" -> setJail(sender, label, args);
-            case "jail" -> jail(sender, label, args);
-            case "unjail" -> unjail(sender, label, args);
-            default -> true;
-        };
+    private CommandService setJailCommand() {
+        return new CommandService(HydroCommand.builder("setjail")
+                .permission("hydroxide.command.setjail")
+                .playerOnly(true)
+                .usage("/{label} <name>")
+                .executor(ctx -> setJail(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .build(), context.messages());
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        return switch (command.getName().toLowerCase(java.util.Locale.ROOT)) {
-            case "jail" -> {
-                if (args.length == 1) {
-                    yield net.axther.hydroxide.commands.CompletionUtils.onlinePlayers(args[0]);
-                }
-                if (args.length == 2) {
-                    yield CommandUtils.matching(args[1], jailNames());
-                }
-                if (args.length == 3) {
-                    yield CommandUtils.matching(args[2], List.of("60", "300", "600", "3600", "86400"));
-                }
-                yield List.of();
+    private CommandService jailCommand() {
+        return new CommandService(HydroCommand.builder("jail")
+                .permission("hydroxide.command.jail")
+                .usage("/{label} <player> [duration] [jail] [cellId] [-s] [r:<reason>]")
+                .executor(ctx -> jail(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(this::jailCompletions)
+                .build(), context.messages());
+    }
+
+    private CommandService toggleJailCommand() {
+        return new CommandService(HydroCommand.builder("togglejail")
+                .permission("hydroxide.command.togglejail")
+                .usage("/{label} <player> [duration] [jail] [cellId] [-s] [r:<reason>]")
+                .executor(ctx -> toggleJail(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(this::jailCompletions)
+                .build(), context.messages());
+    }
+
+    private CommandService unjailCommand() {
+        return new CommandService(HydroCommand.builder("unjail")
+                .permission("hydroxide.command.unjail")
+                .usage("/{label} <player> [-s]")
+                .executor(ctx -> unjail(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(ctx -> ctx.arguments().size() == 1 ? CompletionUtils.onlinePlayers(ctx.argument(0)) : List.of())
+                .build(), context.messages());
+    }
+
+    private CommandService jailsCommand() {
+        return new CommandService(HydroCommand.builder("jails")
+                .permission("hydroxide.command.jails")
+                .usage("/{label} [jail] [cellId]")
+                .executor(ctx -> listJails(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(this::jailsCompletions)
+                .build(), context.messages());
+    }
+
+    private CommandService deleteJailCommand() {
+        return new CommandService(HydroCommand.builder("deljail")
+                .permission("hydroxide.command.deljail")
+                .usage("/{label} <name>")
+                .executor(ctx -> deleteJail(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(ctx -> ctx.arguments().size() == 1 ? CommandUtils.matching(ctx.argument(0), jailNames()) : List.of())
+                .build(), context.messages());
+    }
+
+    private List<String> jailCompletions(CommandContext ctx) {
+        if (ctx.arguments().size() == 1) {
+            return CompletionUtils.onlinePlayers(ctx.argument(0));
+        }
+        if (ctx.arguments().size() == 2) {
+            List<String> values = new java.util.ArrayList<>(jailNames());
+            values.addAll(List.of("5m", "10m", "30m", "1h", "-s", "r:"));
+            return CommandUtils.matching(ctx.argument(1), values);
+        }
+        if (ctx.arguments().size() == 3) {
+            if (JailCommandParser.parseDurationHint(ctx.argument(1)).isPresent()) {
+                return CommandUtils.matching(ctx.argument(2), jailNames());
             }
-            case "unjail" -> args.length == 1
-                    ? net.axther.hydroxide.commands.CompletionUtils.onlinePlayers(args[0])
-                    : List.of();
-            default -> List.of();
-        };
+            return CommandUtils.matching(ctx.argument(2), List.of("5m", "10m", "30m", "1h", "300", "3600", "-s", "r:"));
+        }
+        return List.of();
+    }
+
+    private List<String> jailsCompletions(CommandContext ctx) {
+        if (ctx.arguments().size() == 1) {
+            return CommandUtils.matching(ctx.argument(0), jailBaseNames());
+        }
+        if (ctx.arguments().size() == 2) {
+            return CommandUtils.matching(ctx.argument(1), cellIds(ctx.argument(0)));
+        }
+        return List.of();
     }
 
     @EventHandler
@@ -129,20 +185,20 @@ public final class JailModule implements HydroModule, Listener, CommandExecutor,
     public void onChat(AsyncChatEvent event) {
         if (jailed.containsKey(event.getPlayer().getUniqueId())) {
             event.setCancelled(true);
-            context.send(event.getPlayer(), "<red>You cannot chat while jailed.");
+            context.message(event.getPlayer(), "jail.restriction.chat", Map.of());
         }
     }
 
     @EventHandler
-    public void onCommand(PlayerCommandPreprocessEvent event) {
+    public void onCommandPreprocess(PlayerCommandPreprocessEvent event) {
         if (!jailed.containsKey(event.getPlayer().getUniqueId())) {
             return;
         }
-        String root = event.getMessage().split(" ")[0].toLowerCase(java.util.Locale.ROOT);
+        String root = event.getMessage().split(" ")[0].toLowerCase(Locale.ROOT);
         List<String> whitelist = context.plugin().getConfig().getStringList("jail.allowed-commands");
         if (whitelist.stream().noneMatch(root::equalsIgnoreCase)) {
             event.setCancelled(true);
-            context.send(event.getPlayer(), "<red>You cannot use that command while jailed.");
+            context.message(event.getPlayer(), "jail.restriction.command", Map.of());
         }
     }
 
@@ -169,74 +225,161 @@ public final class JailModule implements HydroModule, Listener, CommandExecutor,
     }
 
     private boolean setJail(CommandSender sender, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.setjail")) {
-            return true;
-        }
-        if (!(sender instanceof Player player)) {
-            context.send(sender, "<red>Only players can set jail cells.");
-            return true;
-        }
+        Player player = (Player) sender;
         if (args.length == 0) {
-            context.send(sender, "<red>Usage: /" + label + " <name>");
+            context.message(sender, "jail.set.usage", Map.of("label", label));
             return true;
         }
         YamlConfiguration yaml = jailStore.load();
-        StoredLocation.from(player.getLocation()).writeTo(yaml.createSection("jails." + args[0].toLowerCase(java.util.Locale.ROOT)));
+        String jailName = args[0].toLowerCase(Locale.ROOT);
+        StoredLocation.from(player.getLocation()).writeTo(yaml.createSection("jails." + jailName));
         jailStore.save(yaml);
-        context.send(sender, "<green>Jail cell set.");
+        context.message(sender, "jail.set.success", Map.of("jail", jailName));
         return true;
     }
 
     private boolean jail(CommandSender sender, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.jail")) {
+        JailCommandParser.Request request = JailCommandParser
+                .parse(List.of(args), jailNames(), defaultJailDuration())
+                .orElse(null);
+        if (request == null) {
+            context.message(sender, "jail.jail.usage", Map.of("label", label));
             return true;
         }
-        if (args.length < 3) {
-            context.send(sender, "<red>Usage: /" + label + " <player> <cell> <seconds> [reason]");
+        return jailPlayer(sender, request, "jail.jail.player-offline", "jail.jail.no-cells",
+                "jail.jail.missing-cell", "jail.jail.success");
+    }
+
+    private boolean toggleJail(CommandSender sender, String label, String[] args) {
+        JailToggleCommandParser.Request request = JailToggleCommandParser
+                .parse(List.of(args), jailNames(), defaultJailDuration())
+                .orElse(null);
+        if (request == null) {
+            context.message(sender, "jail.toggle.usage", Map.of("label", label));
             return true;
         }
-        Player target = CommandUtils.onlinePlayer(args[0]).orElse(null);
+        Player target = CommandUtils.onlinePlayer(request.targetName()).orElse(null);
         if (target == null) {
-            context.send(sender, "<red>That player is not online.");
+            context.message(sender, "jail.toggle.player-offline", Map.of("target", request.targetName()));
             return true;
         }
-        if (jailLocation(args[1]).isEmpty()) {
-            context.send(sender, "<red>That jail cell does not exist.");
+        if (jailed.containsKey(target.getUniqueId())) {
+            release(target.getUniqueId());
+            if (!request.silent()) {
+                context.message(sender, "jail.toggle.released", Map.of("target", target.getName()));
+            }
             return true;
         }
-        long seconds = parseLong(args[2], 60L);
+        return jailPlayer(sender, request.toJailRequest(), "jail.toggle.player-offline", "jail.toggle.no-cells",
+                "jail.toggle.missing-cell", "jail.toggle.jailed");
+    }
+
+    private boolean jailPlayer(CommandSender sender, JailCommandParser.Request request, String offlineKey,
+                               String noCellsKey, String missingCellKey, String successKey) {
+        Player target = CommandUtils.onlinePlayer(request.targetName()).orElse(null);
+        if (target == null) {
+            context.message(sender, offlineKey, Map.of("target", request.targetName()));
+            return true;
+        }
+        Optional<String> jailName = resolveJailName(request);
+        if (jailName.isEmpty()) {
+            context.message(sender, noCellsKey, Map.of());
+            return true;
+        }
+        String resolvedJailName = jailName.get();
+        if (jailLocation(resolvedJailName).isEmpty()) {
+            context.message(sender, missingCellKey, Map.of("jail", resolvedJailName));
+            return true;
+        }
+        long seconds = Math.max(1L, request.duration().toSeconds());
         UUID jailerId = sender instanceof Player player ? player.getUniqueId() : new UUID(0L, 0L);
         JailSentence sentence = new JailSentence(
                 target.getUniqueId(),
-                args[1].toLowerCase(java.util.Locale.ROOT),
+                resolvedJailName.toLowerCase(Locale.ROOT),
                 jailerId,
-                args.length >= 4 ? CommandUtils.joinArgs(args, 3) : "No reason provided",
-                Instant.now().plusSeconds(Math.max(1L, seconds)),
+                request.reason().orElseGet(() -> context.messages().template("jail.jail.default-reason", "No reason provided")),
+                Instant.now().plusSeconds(seconds),
                 StoredLocation.from(target.getLocation())
         );
         jailed.put(target.getUniqueId(), sentence);
         saveSentences();
         teleportToJail(target, sentence.jailName());
-        context.send(sender, "<green>Jailed <white>" + target.getName() + "<green>.");
+        if (!request.silent()) {
+            context.message(sender, successKey, Map.of("target", target.getName(), "jail", sentence.jailName(), "seconds", seconds));
+        }
         return true;
     }
 
     private boolean unjail(CommandSender sender, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.unjail")) {
+        JailReleaseCommandParser.Request request = JailReleaseCommandParser.parse(List.of(args)).orElse(null);
+        if (request == null) {
+            context.message(sender, "jail.unjail.usage", Map.of("label", label));
             return true;
         }
-        if (args.length == 0) {
-            context.send(sender, "<red>Usage: /" + label + " <player>");
-            return true;
-        }
-        Player target = CommandUtils.onlinePlayer(args[0]).orElse(null);
+        Player target = CommandUtils.onlinePlayer(request.targetName()).orElse(null);
         UUID targetId = target != null ? target.getUniqueId() : null;
         if (targetId == null) {
-            context.send(sender, "<red>That player is not online.");
+            context.message(sender, "jail.unjail.player-offline", Map.of("target", request.targetName()));
             return true;
         }
         release(targetId);
-        context.send(sender, "<green>Released <white>" + target.getName() + "<green>.");
+        if (!request.silent()) {
+            context.message(sender, "jail.unjail.success", Map.of("target", target.getName()));
+        }
+        return true;
+    }
+
+    private boolean listJails(CommandSender sender, String label, String[] args) {
+        if (args.length > 2) {
+            context.message(sender, "jail.list.usage", Map.of("label", label));
+            return true;
+        }
+        JailListSnapshot snapshot = JailListSnapshot.create(
+                jailNames(),
+                jailed.values(),
+                jailedPlayerNames(),
+                args.length >= 1 ? Optional.of(args[0]) : Optional.empty(),
+                args.length >= 2 ? Optional.of(args[1]) : Optional.empty(),
+                Instant.now()
+        );
+        if (snapshot.empty()) {
+            context.message(sender, "jail.list.empty", Map.of());
+            return true;
+        }
+        context.message(sender, "jail.list.header", Map.of("count", snapshot.cells().size()));
+        for (int index = 0; index < snapshot.cells().size(); index++) {
+            JailListSnapshot.Cell cell = snapshot.cells().get(index);
+            context.message(sender, "jail.list.entry", Map.of(
+                    "index", index + 1,
+                    "jail", cell.jailName(),
+                    "occupied", cell.prisonerCount()
+            ));
+            if (cell.prisoners().isEmpty()) {
+                context.message(sender, "jail.list.no-prisoners", Map.of("jail", cell.jailName()));
+            }
+            for (JailListSnapshot.Prisoner prisoner : cell.prisoners()) {
+                context.message(sender, "jail.list.prisoner", Map.of(
+                        "player", prisoner.playerName(),
+                        "remaining", prisoner.remainingSeconds(),
+                        "reason", prisoner.reason()
+                ));
+            }
+        }
+        return true;
+    }
+
+    private boolean deleteJail(CommandSender sender, String label, String[] args) {
+        if (args.length != 1) {
+            context.message(sender, "jail.delete.usage", Map.of("label", label));
+            return true;
+        }
+        YamlConfiguration yaml = jailStore.load();
+        if (!JailCellIndex.delete(yaml, args[0])) {
+            context.message(sender, "jail.delete.missing-cell", Map.of("jail", args[0]));
+            return true;
+        }
+        jailStore.save(yaml);
+        context.message(sender, "jail.delete.success", Map.of("jail", args[0].toLowerCase(Locale.ROOT)));
         return true;
     }
 
@@ -257,7 +400,7 @@ public final class JailModule implements HydroModule, Listener, CommandExecutor,
         Player player = Bukkit.getPlayer(playerId);
         if (player != null && sentence.previousLocation() != null) {
             toLocation(sentence.previousLocation()).ifPresent(player::teleportAsync);
-            context.send(player, "<green>You have been released from jail.");
+            context.message(player, "jail.release.notice", Map.of());
         }
         saveSentences();
     }
@@ -267,12 +410,71 @@ public final class JailModule implements HydroModule, Listener, CommandExecutor,
     }
 
     private Optional<StoredLocation> jailLocation(String jailName) {
-        return StoredLocation.readFrom(jailStore.load().getConfigurationSection("jails." + jailName.toLowerCase(java.util.Locale.ROOT)));
+        return StoredLocation.readFrom(jailStore.load().getConfigurationSection("jails." + jailName.toLowerCase(Locale.ROOT)));
     }
 
     private List<String> jailNames() {
-        ConfigurationSection section = jailStore.load().getConfigurationSection("jails");
-        return section == null ? List.of() : section.getKeys(false).stream().sorted(String.CASE_INSENSITIVE_ORDER).toList();
+        return JailCellIndex.names(jailStore.load());
+    }
+
+    private List<String> jailBaseNames() {
+        return jailNames().stream()
+                .map(name -> name.split("-", 2)[0])
+                .distinct()
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    private List<String> cellIds(String jailName) {
+        String prefix = jailName.toLowerCase(Locale.ROOT) + "-";
+        return jailNames().stream()
+                .map(name -> name.toLowerCase(Locale.ROOT))
+                .filter(name -> name.startsWith(prefix))
+                .map(name -> name.substring(prefix.length()))
+                .filter(cell -> !cell.isBlank())
+                .sorted(String.CASE_INSENSITIVE_ORDER)
+                .toList();
+    }
+
+    private Map<UUID, String> jailedPlayerNames() {
+        Map<UUID, String> names = new HashMap<>();
+        for (UUID playerId : jailed.keySet()) {
+            Player online = Bukkit.getPlayer(playerId);
+            if (online != null) {
+                names.put(playerId, online.getName());
+                continue;
+            }
+            String offlineName = Bukkit.getOfflinePlayer(playerId).getName();
+            if (offlineName != null && !offlineName.isBlank()) {
+                names.put(playerId, offlineName);
+            }
+        }
+        return names;
+    }
+
+    private Duration defaultJailDuration() {
+        long seconds = context.plugin().getConfig().getLong("jail.default-duration-seconds", 300L);
+        return Duration.ofSeconds(Math.max(1L, seconds));
+    }
+
+    private Optional<String> resolveJailName(JailCommandParser.Request request) {
+        Optional<String> configured = request.jailName().or(this::defaultJailName);
+        if (configured.isEmpty()) {
+            return Optional.empty();
+        }
+        String jailName = configured.get().toLowerCase(Locale.ROOT);
+        if (request.cellId().isPresent()) {
+            String combinedName = jailName + "-" + request.cellId().get();
+            if (jailLocation(combinedName).isPresent()) {
+                return Optional.of(combinedName);
+            }
+        }
+        return Optional.of(jailName);
+    }
+
+    private Optional<String> defaultJailName() {
+        List<String> names = jailNames();
+        return names.isEmpty() ? Optional.empty() : Optional.of(names.getFirst());
     }
 
     private Optional<Location> toLocation(StoredLocation stored) {
@@ -325,11 +527,4 @@ public final class JailModule implements HydroModule, Listener, CommandExecutor,
         }
     }
 
-    private long parseLong(String input, long fallback) {
-        try {
-            return Long.parseLong(input);
-        } catch (NumberFormatException exception) {
-            return fallback;
-        }
-    }
 }

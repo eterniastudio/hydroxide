@@ -80,6 +80,11 @@ public final class SqlPlayerDataStore implements PlayerDataStore {
     }
 
     @Override
+    public Map<UUID, Double> balances() {
+        return join(engine.balances());
+    }
+
+    @Override
     public List<UUID> friends(UUID playerId) {
         return join(engine.friends(playerId));
     }

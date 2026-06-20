@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -79,6 +80,22 @@ class StorageEngineTest {
             assertThrows(IllegalArgumentException.class, () -> store.setBalance(playerId, Double.NaN));
             assertThrows(IllegalArgumentException.class, () -> store.setBalance(playerId, Double.POSITIVE_INFINITY));
             assertThrows(IllegalArgumentException.class, () -> store.setBalance(playerId, 1.001));
+        }
+    }
+
+    @Test
+    void exposesKnownBalancesForLeaderboards() throws Exception {
+        DatabaseSettings settings = DatabaseSettings.sqlite("leaderboard.db");
+        UUID first = UUID.randomUUID();
+        UUID second = UUID.randomUUID();
+
+        try (DatabaseManager manager = DatabaseManager.open(settings, tempDir.toFile())) {
+            PlayerDataStore store = new SqlPlayerDataStore(new StorageEngine(manager));
+
+            store.setBalance(first, 12.25);
+            store.setBalance(second, 99.50);
+
+            assertEquals(Map.of(first, 12.25, second, 99.50), store.balances());
         }
     }
 }

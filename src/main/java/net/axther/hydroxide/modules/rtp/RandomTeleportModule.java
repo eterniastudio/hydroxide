@@ -1,7 +1,8 @@
 package net.axther.hydroxide.modules.rtp;
 
 import net.axther.hydroxide.HydroxideContext;
-import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
@@ -9,9 +10,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.World;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
@@ -24,7 +22,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 
-public final class RandomTeleportModule implements HydroModule, Listener, CommandExecutor {
+public final class RandomTeleportModule implements HydroModule, Listener {
 
     private HydroxideContext context;
     private final Map<UUID, Long> cooldowns = new HashMap<>();
@@ -54,7 +52,7 @@ public final class RandomTeleportModule implements HydroModule, Listener, Comman
     public void onEnable(HydroxideContext context) {
         this.context = context;
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("rtp", this);
+        context.commands().register("rtp", rtpCommand());
     }
 
     @Override
@@ -62,27 +60,26 @@ public final class RandomTeleportModule implements HydroModule, Listener, Comman
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can use RTP.");
-            return true;
-        }
-        if (!context.requirePermission(sender, "hydroxide.command.rtp")) {
-            return true;
-        }
+    private CommandService rtpCommand() {
+        return new CommandService(HydroCommand.builder("rtp")
+                .permission("hydroxide.command.rtp")
+                .usage("/{label}")
+                .playerOnly(true)
+                .executor(ctx -> start((Player) ctx.sender()))
+                .build(), context.messages());
+    }
+
+    private void start(Player player) {
         long now = System.currentTimeMillis();
         long cooldownMillis = context.plugin().getConfig().getLong("rtp.cooldown-seconds", 60L) * 1000L;
         Long readyAt = cooldowns.get(player.getUniqueId());
         if (readyAt != null && readyAt > now) {
-            context.send(player, "<red>RTP is on cooldown for <white>" + Math.ceil((readyAt - now) / 1000.0D) + "s<red>.");
-            return true;
+            context.message(player, "rtp.cooldown", Map.of("remaining", Math.ceil((readyAt - now) / 1000.0D) + "s"));
+            return;
         }
         cooldowns.put(player.getUniqueId(), now + cooldownMillis);
-        context.send(player, "<gray>Searching for a safe location...");
+        context.message(player, "rtp.searching", Map.of());
         find(player, 0);
-        return true;
     }
 
     @EventHandler
@@ -97,7 +94,7 @@ public final class RandomTeleportModule implements HydroModule, Listener, Comman
 
     private void find(Player player, int attempts) {
         if (attempts > context.plugin().getConfig().getInt("rtp.max-attempts", 16)) {
-            context.send(player, "<red>Could not find a safe RTP location.");
+            context.message(player, "rtp.no-location", Map.of());
             cooldowns.remove(player.getUniqueId());
             return;
         }
@@ -124,20 +121,20 @@ public final class RandomTeleportModule implements HydroModule, Listener, Comman
                     .map(economy -> economy.withdrawPlayer(player, cost))
                     .orElse(null);
             if (response == null || !response.transactionSuccess()) {
-                context.send(player, "<red>You cannot afford RTP.");
+                context.message(player, "rtp.cannot-afford", Map.of());
                 cooldowns.remove(player.getUniqueId());
                 return;
             }
         }
         player.teleportAsync(location).thenAccept(success -> Bukkit.getScheduler().runTask(context.plugin(), () -> {
             if (!success) {
-                context.send(player, "<red>RTP failed.");
+                context.message(player, "rtp.failed", Map.of());
                 return;
             }
             fallImmuneUntil.put(player.getUniqueId(), System.currentTimeMillis()
                     + context.plugin().getConfig().getLong("rtp.fall-immunity-seconds", 5L) * 1000L);
             player.getWorld().spawnParticle(Particle.PORTAL, player.getLocation(), 80, 0.75D, 1.0D, 0.75D, 0.1D);
-            context.send(player, "<green>Randomly teleported.");
+            context.message(player, "rtp.success", Map.of());
         }));
     }
 

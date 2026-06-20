@@ -2,6 +2,9 @@ package net.axther.hydroxide.modules.hologram;
 
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandContext;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.modules.builder.BuilderMaterialResolver;
 import net.axther.hydroxide.storage.YamlStore;
@@ -10,10 +13,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.BlockDisplay;
@@ -30,11 +30,15 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 
-public final class HologramModule implements HydroModule, CommandExecutor, TabCompleter {
+public final class HologramModule implements HydroModule {
 
     private static final String TAG = "hydroxide_hologram";
+    private static final String DEFAULT_LINE = "<#44CCFF>Hydroxide Hologram";
+    private static final List<String> CREATE_TYPES = List.of("block", "item", "text");
+    private static final List<String> LINE_ACTIONS = List.of("add", "remove", "set");
 
     private HydroxideContext context;
     private YamlStore store;
@@ -63,7 +67,7 @@ public final class HologramModule implements HydroModule, CommandExecutor, TabCo
     public void onEnable(HydroxideContext context) {
         this.context = context;
         this.store = new YamlStore(new File(context.plugin().getDataFolder(), "holograms.yml"));
-        context.commands().register("holo", this);
+        context.commands().register("holo", holoCommand());
         recreateAll();
     }
 
@@ -77,90 +81,115 @@ public final class HologramModule implements HydroModule, CommandExecutor, TabCo
         recreateAll();
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.holo.admin")) {
-            return true;
-        }
-        if (args.length == 0) {
-            context.send(sender, "<red>Usage: /" + label + " create|delete|line|movehere|clone|list|near ...");
-            return true;
-        }
-        return switch (args[0].toLowerCase(Locale.ROOT)) {
-            case "create" -> create(sender, label, args);
-            case "delete" -> delete(sender, label, args);
-            case "line" -> line(sender, label, args);
-            case "movehere" -> moveHere(sender, label, args);
-            case "clone" -> clone(sender, label, args);
-            case "list" -> list(sender);
-            case "near" -> near(sender, args);
-            default -> {
-                context.send(sender, "<red>Usage: /" + label + " create|delete|line|movehere|clone|list|near ...");
-                yield true;
-            }
-        };
+    private CommandService holoCommand() {
+        return new CommandService(HydroCommand.builder("holo")
+                .permission("hydroxide.holo.admin")
+                .usage("/{label} create|delete|line|movehere|clone|list|near ...")
+                .executor(ctx -> usage(ctx.sender(), ctx.label()))
+                .child(HydroCommand.builder("create")
+                        .playerOnly(true)
+                        .usage("/{label} create <id> [text|item|block] [value]")
+                        .executor(ctx -> create((Player) ctx.sender(), ctx.label(), ctx.arguments()))
+                        .completer(this::createCompletions)
+                        .build())
+                .child(HydroCommand.builder("delete")
+                        .usage("/{label} delete <id>")
+                        .executor(ctx -> delete(ctx.sender(), ctx.label(), ctx.arguments()))
+                        .completer(this::idCompletions)
+                        .build())
+                .child(HydroCommand.builder("line")
+                        .usage("/{label} line add|set|remove <id> ...")
+                        .executor(ctx -> line(ctx.sender(), ctx.label(), ctx.arguments()))
+                        .completer(this::lineCompletions)
+                        .build())
+                .child(HydroCommand.builder("movehere")
+                        .playerOnly(true)
+                        .usage("/{label} movehere <id>")
+                        .executor(ctx -> moveHere((Player) ctx.sender(), ctx.label(), ctx.arguments()))
+                        .completer(this::idCompletions)
+                        .build())
+                .child(HydroCommand.builder("clone")
+                        .usage("/{label} clone <id> <newId>")
+                        .executor(ctx -> clone(ctx.sender(), ctx.label(), ctx.arguments()))
+                        .completer(this::cloneCompletions)
+                        .build())
+                .child(HydroCommand.builder("list")
+                        .usage("/{label} list")
+                        .executor(ctx -> list(ctx.sender()))
+                        .build())
+                .child(HydroCommand.builder("near")
+                        .playerOnly(true)
+                        .usage("/{label} near [radius]")
+                        .executor(ctx -> near((Player) ctx.sender(), ctx.arguments()))
+                        .build())
+                .build(), context.messages());
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return CommandUtils.matching(args[0], List.of("clone", "create", "delete", "line", "list", "movehere", "near"));
+    private List<String> createCompletions(CommandContext ctx) {
+        if (ctx.arguments().size() == 2) {
+            return CommandUtils.matching(ctx.argument(1), CREATE_TYPES);
         }
-        if ((args[0].equalsIgnoreCase("delete") || args[0].equalsIgnoreCase("movehere") || args[0].equalsIgnoreCase("clone")) && args.length == 2) {
-            return CommandUtils.matching(args[1], ids());
-        }
-        if (args[0].equalsIgnoreCase("create") && args.length == 3) {
-            return CommandUtils.matching(args[2], List.of("block", "item", "text"));
-        }
-        if (args[0].equalsIgnoreCase("create") && args.length == 4 && (args[2].equalsIgnoreCase("block") || args[2].equalsIgnoreCase("item"))) {
-            return CommandUtils.matching(args[3], MaterialAware.materialKeys(args[2].equalsIgnoreCase("block")));
-        }
-        if (args[0].equalsIgnoreCase("line")) {
-            if (args.length == 2) {
-                return CommandUtils.matching(args[1], List.of("add", "remove", "set"));
-            }
-            if (args.length == 3) {
-                return CommandUtils.matching(args[2], ids());
-            }
+        if (ctx.arguments().size() == 3 && (ctx.argument(1).equalsIgnoreCase("block") || ctx.argument(1).equalsIgnoreCase("item"))) {
+            return CommandUtils.matching(ctx.argument(2), MaterialAware.materialKeys(ctx.argument(1).equalsIgnoreCase("block")));
         }
         return List.of();
     }
 
-    private boolean create(CommandSender sender, String label, String[] args) {
-        Player player = requirePlayer(sender);
-        if (player == null || args.length < 2) {
-            context.send(sender, "<red>Usage: /" + label + " create <id> [text|item|block] [value]");
-            return true;
+    private List<String> idCompletions(CommandContext ctx) {
+        if (ctx.arguments().size() == 1) {
+            return CommandUtils.matching(ctx.argument(0), ids());
         }
-        String id = sanitize(args[1]);
-        HologramDisplayType type = args.length >= 3 ? HologramDisplayType.from(args[2]).orElse(null) : HologramDisplayType.TEXT;
+        return List.of();
+    }
+
+    private List<String> cloneCompletions(CommandContext ctx) {
+        return ctx.arguments().size() == 1 ? CommandUtils.matching(ctx.argument(0), ids()) : List.of();
+    }
+
+    private List<String> lineCompletions(CommandContext ctx) {
+        if (ctx.arguments().size() == 1) {
+            return CommandUtils.matching(ctx.argument(0), LINE_ACTIONS);
+        }
+        if (ctx.arguments().size() == 2) {
+            return CommandUtils.matching(ctx.argument(1), ids());
+        }
+        return List.of();
+    }
+
+    private void create(Player player, String label, List<String> args) {
+        if (args.isEmpty()) {
+            context.message(player, "holograms.create.usage", Map.of("label", label));
+            return;
+        }
+        String id = sanitize(args.get(0));
+        HologramDisplayType type = args.size() >= 2 ? HologramDisplayType.from(args.get(1)).orElse(null) : HologramDisplayType.TEXT;
         if (type == null) {
-            context.send(sender, "<red>Usage: /" + label + " create <id> [text|item|block] [value]");
-            return true;
+            context.message(player, "holograms.create.usage", Map.of("label", label));
+            return;
         }
         String payload = "";
-        List<String> lines = List.of("<#44CCFF>Hydroxide Hologram");
-        if (type == HologramDisplayType.TEXT && args.length >= 4) {
-            lines = List.of(CommandUtils.joinArgs(args, 3));
+        List<String> lines = List.of(context.messages().template("holograms.default-line", DEFAULT_LINE));
+        if (type == HologramDisplayType.TEXT && args.size() >= 3) {
+            lines = List.of(joinArgs(args, 2));
         } else if (type == HologramDisplayType.ITEM) {
-            Material material = args.length >= 4
-                    ? BuilderMaterialResolver.resolve(args[3]).filter(this::isItemMaterial).orElse(null)
+            Material material = args.size() >= 3
+                    ? BuilderMaterialResolver.resolve(args.get(2)).filter(this::isItemMaterial).orElse(null)
                     : player.getInventory().getItemInMainHand().getType();
             if (material == null || material == Material.AIR || !isItemMaterial(material)) {
-                context.send(sender, "<red>Usage: /" + label + " create <id> item <material>");
-                return true;
+                context.message(player, "holograms.create.item-usage", Map.of("label", label));
+                return;
             }
             payload = material.key().asString();
             lines = List.of();
         } else if (type == HologramDisplayType.BLOCK) {
-            if (args.length < 4) {
-                context.send(sender, "<red>Usage: /" + label + " create <id> block <block>");
-                return true;
+            if (args.size() < 3) {
+                context.message(player, "holograms.create.block-usage", Map.of("label", label));
+                return;
             }
-            Material material = BuilderMaterialResolver.resolveBlock(args[3]).orElse(null);
+            Material material = BuilderMaterialResolver.resolveBlock(args.get(2)).orElse(null);
             if (material == null) {
-                context.send(sender, "<red>Unknown block.");
-                return true;
+                context.message(player, "holograms.unknown-block", Map.of());
+                return;
             }
             payload = material.key().asString();
             lines = List.of();
@@ -169,130 +198,128 @@ public final class HologramModule implements HydroModule, CommandExecutor, TabCo
         HologramDefinition definition = new HologramDefinition(id, location.getWorld().getName(), location.getX(), location.getY(), location.getZ(), type, payload, lines);
         save(definition);
         spawn(definition);
-        context.send(sender, "<green>Hologram <white>" + id + " <green>created.");
-        return true;
+        context.message(player, "holograms.create.success", Map.of("id", id));
     }
 
-    private boolean delete(CommandSender sender, String label, String[] args) {
-        if (args.length < 2) {
-            context.send(sender, "<red>Usage: /" + label + " delete <id>");
-            return true;
+    private void delete(CommandSender sender, String label, List<String> args) {
+        if (args.isEmpty()) {
+            context.message(sender, "holograms.delete.usage", Map.of("label", label));
+            return;
         }
-        String id = sanitize(args[1]);
+        String id = sanitize(args.get(0));
         YamlConfiguration yaml = store.load();
         yaml.set("holograms." + id, null);
         store.save(yaml);
         removeDisplay(id);
-        context.send(sender, "<green>Hologram deleted.");
-        return true;
+        context.message(sender, "holograms.delete.success", Map.of("id", id));
     }
 
-    private boolean line(CommandSender sender, String label, String[] args) {
-        if (args.length < 4) {
-            context.send(sender, "<red>Usage: /" + label + " line add|set|remove <id> ...");
-            return true;
+    private void line(CommandSender sender, String label, List<String> args) {
+        if (args.size() < 3) {
+            context.message(sender, "holograms.line.usage", Map.of("label", label));
+            return;
         }
-        String action = args[1].toLowerCase(Locale.ROOT);
-        String id = sanitize(args[2]);
+        String action = args.get(0).toLowerCase(Locale.ROOT);
+        String id = sanitize(args.get(1));
         HologramDefinition definition = load(id).orElse(null);
         if (definition == null) {
-            context.send(sender, "<red>That hologram does not exist.");
-            return true;
+            context.message(sender, "holograms.missing", Map.of("id", id));
+            return;
         }
         if (definition.type() != HologramDisplayType.TEXT) {
-            context.send(sender, "<red>Only text holograms have editable lines.");
-            return true;
+            context.message(sender, "holograms.line.text-only", Map.of("id", id));
+            return;
         }
         List<String> lines = new ArrayList<>(definition.lines());
         switch (action) {
-            case "add" -> lines.add(CommandUtils.joinArgs(args, 3));
+            case "add" -> lines.add(joinArgs(args, 2));
             case "set" -> {
-                if (args.length < 5) {
-                    context.send(sender, "<red>Usage: /" + label + " line set <id> <line> <text>");
-                    return true;
+                if (args.size() < 4) {
+                    context.message(sender, "holograms.line.set-usage", Map.of("label", label));
+                    return;
                 }
-                int index = Math.max(0, parseInt(args[3], 1) - 1);
+                int index = Math.max(0, parseInt(args.get(2), 1) - 1);
                 while (lines.size() <= index) {
                     lines.add("");
                 }
-                lines.set(index, CommandUtils.joinArgs(args, 4));
+                lines.set(index, joinArgs(args, 3));
             }
             case "remove" -> {
-                int index = Math.max(0, parseInt(args[3], 1) - 1);
+                int index = Math.max(0, parseInt(args.get(2), 1) - 1);
                 if (index < lines.size()) {
                     lines.remove(index);
                 }
             }
             default -> {
-                context.send(sender, "<red>Usage: /" + label + " line add|set|remove <id> ...");
-                return true;
+                context.message(sender, "holograms.line.usage", Map.of("label", label));
+                return;
             }
         }
         HologramDefinition updated = new HologramDefinition(definition.id(), definition.worldName(), definition.x(), definition.y(), definition.z(), definition.type(), definition.payload(), lines.isEmpty() ? List.of("") : lines);
         save(updated);
         recreate(updated);
-        context.send(sender, "<green>Hologram lines updated.");
-        return true;
+        context.message(sender, "holograms.line.updated", Map.of("id", id));
     }
 
-    private boolean moveHere(CommandSender sender, String label, String[] args) {
-        Player player = requirePlayer(sender);
-        if (player == null || args.length < 2) {
-            context.send(sender, "<red>Usage: /" + label + " movehere <id>");
-            return true;
+    private void moveHere(Player player, String label, List<String> args) {
+        if (args.isEmpty()) {
+            context.message(player, "holograms.movehere.usage", Map.of("label", label));
+            return;
         }
-        HologramDefinition definition = load(sanitize(args[1])).orElse(null);
+        String id = sanitize(args.get(0));
+        HologramDefinition definition = load(id).orElse(null);
         if (definition == null) {
-            context.send(sender, "<red>That hologram does not exist.");
-            return true;
+            context.message(player, "holograms.missing", Map.of("id", id));
+            return;
         }
         Location location = player.getLocation();
         HologramDefinition moved = new HologramDefinition(definition.id(), location.getWorld().getName(), location.getX(), location.getY(), location.getZ(), definition.type(), definition.payload(), definition.lines());
         save(moved);
         recreate(moved);
-        context.send(sender, "<green>Hologram moved.");
-        return true;
+        context.message(player, "holograms.movehere.success", Map.of("id", id));
     }
 
-    private boolean clone(CommandSender sender, String label, String[] args) {
-        if (args.length < 3) {
-            context.send(sender, "<red>Usage: /" + label + " clone <id> <newId>");
-            return true;
+    private void clone(CommandSender sender, String label, List<String> args) {
+        if (args.size() < 2) {
+            context.message(sender, "holograms.clone.usage", Map.of("label", label));
+            return;
         }
-        HologramDefinition source = load(sanitize(args[1])).orElse(null);
+        String sourceId = sanitize(args.get(0));
+        HologramDefinition source = load(sourceId).orElse(null);
         if (source == null) {
-            context.send(sender, "<red>That hologram does not exist.");
-            return true;
+            context.message(sender, "holograms.missing", Map.of("id", sourceId));
+            return;
         }
-        HologramDefinition copy = new HologramDefinition(sanitize(args[2]), source.worldName(), source.x(), source.y(), source.z(), source.type(), source.payload(), source.lines());
+        String copyId = sanitize(args.get(1));
+        HologramDefinition copy = new HologramDefinition(copyId, source.worldName(), source.x(), source.y(), source.z(), source.type(), source.payload(), source.lines());
         save(copy);
         spawn(copy);
-        context.send(sender, "<green>Hologram cloned.");
-        return true;
+        context.message(sender, "holograms.clone.success", Map.of("id", copyId));
     }
 
-    private boolean list(CommandSender sender) {
-        List<String> ids = ids();
+    private void list(CommandSender sender) {
         List<String> labels = definitions().stream()
                 .map(definition -> definition.id() + " (" + definition.type().key() + ")")
                 .toList();
-        context.send(sender, labels.isEmpty() ? "<gray>No holograms have been created." : "<green>Holograms: <white>" + String.join("<gray>, <white>", labels));
-        return true;
+        if (labels.isEmpty()) {
+            context.message(sender, "holograms.list.empty", Map.of());
+            return;
+        }
+        context.message(sender, "holograms.list.entries", Map.of("entries", String.join(", ", labels)));
     }
 
-    private boolean near(CommandSender sender, String[] args) {
-        Player player = requirePlayer(sender);
-        if (player == null) {
-            return true;
-        }
-        double radius = args.length > 1 ? parseDouble(args[1], 25.0D) : 25.0D;
+    private void near(Player player, List<String> args) {
+        double radius = args.isEmpty() ? 25.0D : parseDouble(args.get(0), 25.0D);
         List<String> nearby = definitions().stream()
                 .filter(definition -> definition.worldName().equals(player.getWorld().getName()))
                 .filter(definition -> player.getLocation().distanceSquared(new Location(player.getWorld(), definition.x(), definition.y(), definition.z())) <= radius * radius)
                 .map(HologramDefinition::id)
                 .toList();
-        context.send(sender, nearby.isEmpty() ? "<gray>No nearby holograms." : "<green>Nearby holograms: <white>" + String.join("<gray>, <white>", nearby));
-        return true;
+        if (nearby.isEmpty()) {
+            context.message(player, "holograms.near.empty", Map.of("radius", radius));
+            return;
+        }
+        context.message(player, "holograms.near.entries", Map.of("entries", String.join(", ", nearby), "radius", radius));
     }
 
     private void recreateAll() {
@@ -407,12 +434,15 @@ public final class HologramModule implements HydroModule, CommandExecutor, TabCo
         return definitions().stream().map(HologramDefinition::id).toList();
     }
 
-    private Player requirePlayer(CommandSender sender) {
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can use that hologram command.");
+    private void usage(CommandSender sender, String label) {
+        context.message(sender, "holograms.usage", Map.of("label", label));
+    }
+
+    private String joinArgs(List<String> args, int startIndex) {
+        if (startIndex >= args.size()) {
+            return "";
         }
-        return player;
+        return String.join(" ", args.subList(startIndex, args.size()));
     }
 
     private String sanitize(String id) {

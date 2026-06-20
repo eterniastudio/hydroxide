@@ -35,11 +35,8 @@ public final class TeleportModule implements HydroModule {
     public void onEnable(HydroxideContext context) {
         commands = new TeleportCommands(context);
         Bukkit.getPluginManager().registerEvents(commands, context.plugin());
-        for (String command : List.of(
-                "spawn", "setspawn", "home", "sethome", "delhome", "homes",
-                "warp", "setwarp", "delwarp", "warps", "back", "tpa", "tpaccept", "tpdeny"
-        )) {
-            context.commands().register(command, commands);
+        for (String command : TeleportCommandCatalog.commands()) {
+            context.commands().register(command, commands.command(command));
         }
     }
 

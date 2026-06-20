@@ -2,12 +2,11 @@ package net.axther.hydroxide.modules.proxy;
 
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.messaging.PluginMessageListener;
 import org.jetbrains.annotations.NotNull;
@@ -18,9 +17,9 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 
-public final class ProxyBridgeModule implements HydroModule, PluginMessageListener, CommandExecutor, TabCompleter {
+public final class ProxyBridgeModule implements HydroModule, PluginMessageListener {
 
     private static final String CHANNEL = "BungeeCord";
     private static final String ALERT_SUBCHANNEL = "HydroxideAlert";
@@ -51,8 +50,10 @@ public final class ProxyBridgeModule implements HydroModule, PluginMessageListen
         this.context = context;
         Bukkit.getMessenger().registerOutgoingPluginChannel(context.plugin(), CHANNEL);
         Bukkit.getMessenger().registerIncomingPluginChannel(context.plugin(), CHANNEL, this);
-        context.commands().register("server", this);
-        context.commands().register("networkalert", this);
+        context.commands().register("server", serverCommand());
+        context.commands().register("serverlist", serverListCommand());
+        context.commands().register("sendall", sendAllCommand());
+        context.commands().register("networkalert", networkAlertCommand());
     }
 
     @Override
@@ -61,21 +62,40 @@ public final class ProxyBridgeModule implements HydroModule, PluginMessageListen
         Bukkit.getMessenger().unregisterIncomingPluginChannel(context.plugin(), CHANNEL, this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        String name = command.getName().toLowerCase(Locale.ROOT);
-        if (name.equals("server")) {
-            return server(sender, label, args);
-        }
-        return networkAlert(sender, label, args);
+    private CommandService serverCommand() {
+        return new CommandService(HydroCommand.builder("server")
+                .permission("hydroxide.command.server")
+                .usage("/{label} <server> [player] [-f]")
+                .executor(ctx -> server(ctx.sender(), ctx.label(), ctx.arguments()))
+                .completer(this::serverCompletions)
+                .build(), context.messages());
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (command.getName().equalsIgnoreCase("server") && args.length == 1) {
-            return CommandUtils.matching(args[0], context.plugin().getConfig().getStringList("proxy.servers"));
-        }
-        return List.of();
+    private CommandService networkAlertCommand() {
+        return new CommandService(HydroCommand.builder("networkalert")
+                .permission("hydroxide.command.networkalert")
+                .usage("/{label} <message>")
+                .executor(ctx -> networkAlert(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .build(), context.messages());
+    }
+
+    private CommandService serverListCommand() {
+        return new CommandService(HydroCommand.builder("serverlist")
+                .permission("hydroxide.command.serverlist")
+                .usage("/{label} [filter]")
+                .executor(ctx -> serverList(ctx.sender(), ctx.arguments()))
+                .build(), context.messages());
+    }
+
+    private CommandService sendAllCommand() {
+        return new CommandService(HydroCommand.builder("sendall")
+                .permission("hydroxide.command.sendall")
+                .usage("/{label} <server>")
+                .executor(ctx -> sendAll(ctx.sender(), ctx.label(), ctx.arguments()))
+                .completer(ctx -> ctx.arguments().size() == 1
+                        ? CommandUtils.matching(ctx.argument(0), context.plugin().getConfig().getStringList("proxy.servers"))
+                        : List.of())
+                .build(), context.messages());
     }
 
     @Override
@@ -103,49 +123,143 @@ public final class ProxyBridgeModule implements HydroModule, PluginMessageListen
         }
     }
 
-    private boolean server(CommandSender sender, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.server")) {
-            return true;
+    private List<String> serverCompletions(net.axther.hydroxide.commands.framework.CommandContext ctx) {
+        if (ctx.arguments().size() == 1) {
+            return CommandUtils.matching(ctx.argument(0), context.plugin().getConfig().getStringList("proxy.servers"));
         }
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can switch servers.");
-            return true;
+        if (ctx.arguments().size() == 2) {
+            List<String> values = new java.util.ArrayList<>(net.axther.hydroxide.commands.CompletionUtils.onlinePlayers(ctx.argument(1)));
+            values.addAll(CommandUtils.matching(ctx.argument(1), List.of("-f")));
+            return values.stream().distinct().sorted(String.CASE_INSENSITIVE_ORDER).toList();
         }
-        if (args.length == 0) {
-            context.send(sender, "<red>Usage: /" + label + " <server>");
-            return true;
+        if (ctx.arguments().size() == 3) {
+            return CommandUtils.matching(ctx.argument(2), List.of("-f"));
         }
-        try {
-            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
-            DataOutputStream output = new DataOutputStream(bytes);
-            output.writeUTF("Connect");
-            output.writeUTF(args[0]);
-            player.sendPluginMessage(context.plugin(), CHANNEL, bytes.toByteArray());
-            context.send(player, "<green>Sending you to <white>" + args[0] + "<green>.");
-        } catch (IOException exception) {
-            context.send(player, "<red>Unable to send proxy message.");
-        }
-        return true;
+        return List.of();
     }
 
-    private boolean networkAlert(CommandSender sender, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.networkalert")) {
-            return true;
+    private void server(CommandSender sender, String label, List<String> args) {
+        var parsed = ProxyServerCommandParser.parse(args);
+        if (parsed.isEmpty()) {
+            context.message(sender, "proxy.server.usage", Map.of("label", label));
+            return;
         }
+
+        ProxyServerCommandParser.Request request = parsed.orElseThrow();
+        Player target;
+        if (request.targetName().isPresent()) {
+            String targetName = request.targetName().orElseThrow();
+            target = CommandUtils.onlinePlayer(targetName).orElse(null);
+            if (target == null) {
+                context.message(sender, "proxy.server.player-offline", Map.of("target", targetName));
+                return;
+            }
+            if (!sender.equals(target) && !sender.hasPermission("hydroxide.command.server.others")) {
+                context.message(sender, "validation.no-permission", Map.of("permission", "hydroxide.command.server.others"));
+                return;
+            }
+        } else {
+            if (!(sender instanceof Player player)) {
+                context.message(sender, "proxy.server.console-target-required", Map.of("label", label));
+                return;
+            }
+            target = player;
+        }
+
+        try {
+            target.sendPluginMessage(context.plugin(), CHANNEL, connectPayload(request.server()));
+            if (sender.equals(target)) {
+                context.message(sender, "proxy.server.sending", Map.of("server", request.server()));
+            } else {
+                context.message(sender, "proxy.server.sending-other", Map.of(
+                        "server", request.server(),
+                        "target", target.getName()
+                ));
+                if (!request.force()) {
+                    context.message(target, "proxy.server.target", Map.of(
+                            "server", request.server(),
+                            "player", sender.getName()
+                    ));
+                }
+            }
+        } catch (IOException exception) {
+            context.message(sender, "proxy.server.failed", Map.of());
+        }
+    }
+
+    private void serverList(CommandSender sender, List<String> args) {
+        String filter = args.isEmpty() ? "" : CommandUtils.joinArgs(args.toArray(String[]::new), 0);
+        ProxyServerListFormatter.Snapshot snapshot = ProxyServerListFormatter.snapshot(
+                context.plugin().getConfig().getStringList("proxy.servers"),
+                filter
+        );
+        if (snapshot.servers().isEmpty()) {
+            context.message(sender, "proxy.serverlist.empty", Map.of(
+                    "filter", filter.isBlank() ? "*" : filter,
+                    "total", snapshot.totalCount()
+            ));
+            return;
+        }
+        context.message(sender, "proxy.serverlist.header", Map.of(
+                "filter", filter.isBlank() ? "*" : filter,
+                "shown", snapshot.shownCount(),
+                "total", snapshot.totalCount()
+        ));
+        snapshot.servers().forEach(server -> context.message(sender, "proxy.serverlist.entry", Map.of("server", server)));
+    }
+
+    private void sendAll(CommandSender sender, String label, List<String> args) {
+        var parsed = ProxySendAllCommandParser.parse(args);
+        if (parsed.isEmpty()) {
+            context.message(sender, "proxy.sendall.usage", Map.of("label", label));
+            return;
+        }
+        List<Player> players = List.copyOf(Bukkit.getOnlinePlayers());
+        if (players.isEmpty()) {
+            context.message(sender, "proxy.sendall.empty", Map.of());
+            return;
+        }
+
+        String server = parsed.orElseThrow().server();
+        int sent = 0;
+        try {
+            byte[] payload = connectPayload(server);
+            for (Player player : players) {
+                player.sendPluginMessage(context.plugin(), CHANNEL, payload);
+                sent++;
+            }
+        } catch (IOException | RuntimeException exception) {
+            context.message(sender, "proxy.sendall.failed", Map.of("server", server, "count", sent));
+            return;
+        }
+
+        context.message(sender, "proxy.sendall.sending", Map.of(
+                "server", server,
+                "count", sent
+        ));
+    }
+
+    private byte[] connectPayload(String server) throws IOException {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        DataOutputStream output = new DataOutputStream(bytes);
+        output.writeUTF("Connect");
+        output.writeUTF(server);
+        return bytes.toByteArray();
+    }
+
+    private void networkAlert(CommandSender sender, String label, String[] args) {
         if (args.length == 0) {
-            context.send(sender, "<red>Usage: /" + label + " <message>");
-            return true;
+            context.message(sender, "proxy.network-alert.usage", Map.of("label", label));
+            return;
         }
         String message = CommandUtils.joinArgs(args, 0);
         Player carrier = Bukkit.getOnlinePlayers().stream().findFirst().orElse(null);
         if (carrier == null) {
-            context.send(sender, "<red>A player must be online to send plugin messages.");
-            return true;
+            context.message(sender, "proxy.network-alert.no-carrier", Map.of());
+            return;
         }
         sendForward(carrier, message);
         broadcast(message);
-        return true;
     }
 
     private void sendForward(Player carrier, String message) {
@@ -165,6 +279,7 @@ public final class ProxyBridgeModule implements HydroModule, PluginMessageListen
     }
 
     private void broadcast(String message) {
-        Bukkit.broadcast(context.text().format("<dark_gray>[<#44CCFF>Network</#44CCFF>] <white>" + message));
+        String sanitized = context.text().plain(context.text().format(message));
+        Bukkit.broadcast(context.messages().component("proxy.network-alert.format", Map.of("message", sanitized)));
     }
 }

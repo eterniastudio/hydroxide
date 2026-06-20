@@ -92,7 +92,7 @@ public final class CombatTagModule implements HydroModule, Listener {
         String root = event.getMessage().split(" ")[0].toLowerCase(Locale.ROOT).replace("/", "");
         if (context.plugin().getConfig().getStringList("combat-tag.blocked-commands").contains(root)) {
             event.setCancelled(true);
-            context.send(event.getPlayer(), "<red>You cannot use that command while combat tagged.");
+            context.message(event.getPlayer(), "combat.command-blocked", Map.of("command", root));
         }
     }
 
@@ -108,7 +108,7 @@ public final class CombatTagModule implements HydroModule, Listener {
             }
         }
         player.getInventory().clear();
-        Bukkit.broadcast(context.text().format("<red>" + player.getName() + " logged out during combat and dropped their inventory."));
+        Bukkit.broadcast(context.messages().component("combat.logout-broadcast", Map.of("player", player.getName())));
         tracker.clear(player.getUniqueId());
     }
 
@@ -119,14 +119,14 @@ public final class CombatTagModule implements HydroModule, Listener {
                 BossBar bar = bossBars.computeIfAbsent(player.getUniqueId(), ignored -> show(player));
                 long duration = context.plugin().getConfig().getLong("combat-tag.duration-seconds", 15L) * 1000L;
                 bar.progress(Math.max(0.0f, Math.min(1.0f, (float) remaining / duration)));
-                bar.name(context.text().format("<red>Combat: <white>" + Math.ceil(remaining / 1000.0D) + "s"));
+                bar.name(context.messages().component("combat.bossbar.countdown", Map.of("seconds", (long) Math.ceil(remaining / 1000.0D))));
             }, () -> hide(player));
         }
     }
 
     private BossBar show(Player player) {
         BossBar bar = bossBars.computeIfAbsent(player.getUniqueId(), ignored -> BossBar.bossBar(
-                context.text().format("<red>Combat"),
+                context.messages().component("combat.bossbar.title", Map.of()),
                 1.0f,
                 BossBar.Color.RED,
                 BossBar.Overlay.PROGRESS

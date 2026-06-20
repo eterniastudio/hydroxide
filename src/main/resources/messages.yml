@@ -1,0 +1,1611 @@
+config-version: 1
+
+core:
+  prefix: "<#44CCFF><bold>Hydroxide</bold> <dark_gray>> <gray>"
+  help:
+    header: "<#44CCFF><bold>Hydroxide</bold> <gray>modern Paper server core"
+    modules: "<gray>/{label} modules <dark_gray>- <white>Show loaded modules"
+    reload: "<gray>/{label} reload <dark_gray>- <white>Reload config, messages, and modules"
+    messages: "<gray>/{label} messages reload <dark_gray>- <white>Reload messages.yml"
+    cooldown: "<gray>/{label} cooldown <dark_gray>- <white>Inspect or clear command cooldown entries"
+    locale: "<gray>/editlocale [keyword|reload|set] <dark_gray>- <white>Search and edit customizable message keys"
+  modules:
+    entry: "{status_color}{module} <dark_gray>- <gray>{status} <dark_gray>- <white>{description}"
+  reload:
+    success: "<green>Hydroxide configuration, messages, and enabled modules reloaded."
+  messages:
+    reload-success: "<green>Hydroxide messages reloaded."
+    reload-usage: "<red>Usage: /{label} messages reload"
+  cooldown:
+    usage: "<red>Usage: /{label} cooldown <status|clear> or /{label} cooldown clear <player|all> [command]"
+    status: "<green>Active command cooldown entries: <white>{count}<green>."
+    cleared-all: "<green>Cleared <white>{count}<green> cooldown entrie(s) matching command filter <white>{command}<green>."
+    cleared-player: "<green>Cleared <white>{count}<green> cooldown entrie(s) for <white>{target}<green> matching command filter <white>{command}<green>."
+    unknown-player: "<red>Player <white>{target}<red> is not online, cached, or a UUID."
+    unavailable: "<red>Command cooldown management is not available until command-control is enabled."
+  locale:
+    usage: "<red>Usage: /{label} [keyword|reload|set <key> <value>]"
+    set-usage: "<red>Usage: /{label} set <key> <value>"
+    header: "<#44CCFF>Locale messages matching <white>{query}<gray> <dark_gray>(showing {count})"
+    entry: "<gray>{key} <dark_gray>= <white>{value}"
+    empty: "<red>No message keys matched <white>{query}<red>."
+    set: "<green>Updated message key <white>{key}<green>. Backup: <white>{backup}<green>. New value: <white>{value}"
+    missing-key: "<red>Message key <white>{key}<red> is not an existing editable string key."
+    invalid-key: "<red>Message key <white>{key}<red> may only contain letters, numbers, dots, underscores, and hyphens."
+    not-file-backed: "<red>Messages are not backed by a writable file in this runtime."
+    save-failed: "<red>Could not save messages.yml: <white>{reason}"
+
+help:
+  header: "<#44CCFF><bold>Help</bold> <gray>page <white>{page}<gray>/<white>{total_pages}<gray> for <white>{query}"
+  entry: "<gray>/<white>{command} <dark_gray>- <gray>{description} <dark_gray>(<white>{usage}<dark_gray>)"
+  empty: "<red>No visible commands matched <white>{query}<red>."
+  footer: "<dark_gray>Use <white>/{label} {next_page}<dark_gray> for the next page."
+
+validation:
+  no-permission: "<red>You do not have permission."
+  player-only: "<red>Only players can use that command."
+  console-only: "<red>Only console can use that command."
+  cooldown: "<red>Wait <white>{remaining} <red>before using that again."
+  usage: "<red>Usage: <white>{usage}"
+  unknown-player: "<red>That player is not known."
+  invalid-amount: "<red>Amount must be a valid number with at most two decimals."
+  command-disabled: "<red>Command <white>{command}<red> is disabled on this server."
+  command-permission-required: "<red>Command <white>{command}<red> requires permission <white>{permission}<red>."
+  command-warmup-started: "<yellow>Command <white>{command}<yellow> will run in <white>{seconds}s<yellow>. Do not move or take damage."
+  command-warmup-cancelled-moved: "<red>Command warmup cancelled because you moved."
+  command-warmup-cancelled-damaged: "<red>Command warmup cancelled because you took damage."
+  command-warmup-cancelled-block-break: "<red>Command warmup cancelled because you broke a block."
+  command-cooldown: "<red>Command <white>{command}<red> is on cooldown for <white>{remaining}<red>."
+  command-one-use-cooldown: "<red>Command <white>{command}<red> can only be used once."
+  command-world-blocked: "<red>Command <white>{command}<red> cannot be used in world <white>{world}<red>."
+
+chat:
+  format: "<dark_gray>[<#44CCFF>{world}</#44CCFF>] <white>{name}<dark_gray>: <white>{message}"
+  broadcast:
+    usage: "<red>Usage: /{label} [!] <message> [-w:world,world] [-r:radius] [-c:world;x;y;z]"
+    format: "<#FFB000><bold>Broadcast</bold> <dark_gray>> <white>{message}"
+    clean-format: "<white>{message}"
+    no-recipients: "<red>No online players matched that broadcast target."
+  me:
+    usage: "<red>Usage: /{label} <action>"
+    format: "<dark_purple>* <light_purple>{player} <white>{message}"
+  clearchat:
+    usage: "<red>Usage: /{label} [self] [-s]"
+    done: "<green>Chat cleared."
+    self-done: "<green>Your chat was cleared."
+    broadcast: "<gray>Chat was cleared by <white>{player}<gray>."
+  message:
+    usage: "<red>Usage: /{label} <player> <message>"
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    console-name: "Console"
+    received: "<dark_gray>[<#44CCFF>{player} <gray>-> <#44CCFF>you<dark_gray>] <white>{message}"
+    sent: "<dark_gray>[<#44CCFF>you <gray>-> <#44CCFF>{target}<dark_gray>] <white>{message}"
+    ignored-by-target: "<red><white>{target} <red>is ignoring you."
+    target-ignored: "<red>You are ignoring <white>{target}<red>. Use <white>/ignore {target} <red>to receive messages again."
+    target-disabled: "<red><white>{target} <red>is not accepting private messages."
+  private-chat:
+    usage: "<red>Usage: /{label} [player|off]"
+    enabled: "<green>Private chat focused on <white>{target}<green>. Normal chat will now private-message them."
+    disabled: "<green>Private chat disabled."
+    status-on: "<green>Private chat is focused on <white>{target}<green>."
+    status-off: "<gray>Private chat is disabled."
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    self-denied: "<red>You cannot focus private chat on yourself."
+    target-lost: "<yellow>Private chat target <white>{target}<yellow> is no longer online. Private chat disabled."
+  reply:
+    usage: "<red>Usage: /{label} <message>"
+    no-target: "<red>You do not have anyone to reply to."
+  msgtoggle:
+    usage: "<red>Usage: /{label} [on|off]"
+    enabled: "<green>You are now accepting private messages."
+    disabled: "<yellow>You are no longer accepting private messages."
+    unavailable: "<red>Private-message options are not available."
+  ignore:
+    usage: "<red>Usage: /{label} [player|list|clear]"
+    added: "<green>You are now ignoring <white>{target}<green>."
+    removed: "<green>You are no longer ignoring <white>{target}<green>."
+    self-denied: "<red>You cannot ignore yourself."
+    empty: "<gray>You are not ignoring anyone."
+    list: "<green>Ignoring: <white>{players}"
+    cleared: "<green>Cleared <white>{count}<green> ignored player(s)."
+  socialspy:
+    usage: "<red>Usage: /{label} [player] [on|off]"
+    enabled: "<green>Social spy enabled."
+    disabled: "<green>Social spy disabled."
+    updated: "<green>Social spy for <white>{target} <green>is now <white>{state}<green>."
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    format: "<dark_gray>[<#FFB000>Spy</#FFB000>] <white>{player} <gray>-> <white>{target}<dark_gray>: <gray>{message}"
+  commandspy:
+    usage: "<red>Usage: /{label} [player] [on|off]"
+    enabled: "<green>Command spy enabled."
+    disabled: "<green>Command spy disabled."
+    updated: "<green>Command spy for <white>{target} <green>is now <white>{state}<green>."
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    format: "<dark_gray>[<#FFB000>CommandSpy</#FFB000>] <white>{player}<dark_gray>: <gray>/{command}"
+  mutechat:
+    usage: "<red>Usage: /{label} [time|status|off] [-s] [reason]"
+    default-reason: "Public chat is temporarily muted."
+    enabled: "<green>Public chat muted for <white>{duration}<green>: <white>{reason}"
+    disabled: "<green>Public chat mute disabled."
+    status-enabled: "<yellow>Public chat is muted by <white>{player}<yellow> for <white>{remaining}<yellow>: <white>{reason}"
+    status-disabled: "<gray>Public chat is not muted."
+    blocked: "<red>Public chat is muted for <white>{remaining}<red>: <gray>{reason}"
+    broadcast-enabled: "<yellow>Public chat was muted by <white>{player}<yellow> for <white>{duration}<yellow>: <white>{reason}"
+    broadcast-disabled: "<green>Public chat mute was disabled by <white>{player}<green>."
+  chatcolor:
+    usage: "<red>Usage: /{label} [player] <hex|color|clear>"
+    current: "{preview}<white>{target}<gray>'s chat color is <white>{name}<gray> (<white>{hex}<gray>, <white>{legacy}<gray>, <white>{mini}<gray>)."
+    none: "<gray><white>{target} <gray>does not have a chat color selected."
+    set: "{preview}Chat color for <white>{target} <gray>set to <white>{name}<gray> (<white>{hex}<gray>, <white>{legacy}<gray>, <white>{mini}<gray>)."
+    cleared: "<green>Chat color cleared for <white>{target}<green>."
+    invalid: "<red>Unknown chat color <white>{value}<red>. Use a color name, legacy code, or hex value like <white>#44CCFF<red>."
+    player-offline: "<red>Player <white>{target} <red>is not online."
+  colors:
+    header: "<#44CCFF>Available colors <gray>({count})"
+    entry: "{preview}{name} <dark_gray>- <gray>legacy <white>{legacy}<gray>, hex <white>{hex}<gray>, MiniMessage <white>{mini}"
+  colorpicker:
+    usage: "<red>Usage: /{label} <hex|color>"
+    result: "{preview}Color <white>{input}<gray>: closest=<white>{name}<gray>, legacy=<white>{legacy}<gray>, hex=<white>{hex}<gray>, MiniMessage=<white>{mini}"
+    invalid: "<red>Unknown color <white>{value}<red>. Use a color name, legacy code, or hex value like <white>#44CCFF<red>."
+  colorlimits:
+    usage: "<red>Usage: /{label} [player]"
+    result: "<#44CCFF>Color limits for <white>{target}<gray>: chat={chat_color}, nickname={nickname_color}, nick-hex={nickname_hex}, gradient={nickname_gradient}, rainbow={nickname_rainbow}"
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    state:
+      allowed: "<green>allowed"
+      denied: "<red>denied"
+
+announcements:
+  actionbar:
+    usage: "<red>Usage: /{label} <player|all> [-s:seconds] <message>"
+  bossbar:
+    usage: "<red>Usage: /{label} <player|all> [-sec:seconds] <message>"
+  title:
+    usage: "<red>Usage: /{label} <player|all> [-in:ticks] [-keep:ticks] [-out:ticks] <title> [\\n subtitle]"
+  ctellraw:
+    usage: "<red>Usage: /{label} <player|all> <message>"
+    sent: "<green>Sent formatted raw message to <white>{count}<green> player(s)."
+  player-offline: "<red>Player <white>{target} <red>is not online."
+  none-online: "<red>No players are online."
+  sent: "<green>Sent <white>{type}<green> announcement to <white>{count}<green> player(s)."
+
+economy:
+  balance:
+    self: "<green>Your balance is <white>{balance}<green>."
+    other: "<green>{player} has <white>{balance}<green>."
+    others-denied: "<red>You do not have permission to check another player's balance."
+  pay:
+    usage: "<red>Usage: /{label} <player> <amount>"
+    self-denied: "<red>You cannot pay yourself."
+    cancelled: "<red>Payment was cancelled by another plugin."
+    failed-returned: "<red>Payment failed and funds were returned."
+    sent: "<green>Paid <white>{target} {amount}<green>."
+    received: "<green>You received <white>{amount} <green>from <white>{player}<green>."
+    target-disabled: "<red><white>{target} <red>is not accepting payments."
+  paytoggle:
+    usage: "<red>Usage: /{label} [on|off]"
+    enabled: "<green>You are now accepting payments."
+    disabled: "<yellow>You are no longer accepting payments."
+    unavailable: "<red>Player options are not available."
+  command-cost:
+    charged: "<gray>Command <white>{command}<gray> cost <white>{amount}<gray>. Balance: <white>{balance}<gray>."
+    insufficient: "<red>Command <white>{command}<red> costs <white>{amount}<red>, but your balance is only <white>{balance}<red>."
+    unavailable: "<red>Command <white>{command}<red> costs <white>{amount}<red>, but the economy service is unavailable."
+  cheque:
+    usage: "<red>Usage: /{label} [player] <amount>"
+    name: "<#44CCFF>Cheque <white>{amount}"
+    lore: "<gray>Right-click to redeem. <dark_gray>ID: {id}"
+    created: "<green>Created a signed cheque for <white>{target}<green> worth <white>{amount}<green>."
+    received: "<green>You received a signed cheque worth <white>{amount} <green>from <white>{player}<green>."
+    redeemed: "<green>Redeemed cheque for <white>{amount}<green>."
+    invalid: "<red>This cheque is invalid or has been tampered with."
+    already-redeemed: "<red>This cheque has already been redeemed."
+    inventory-full: "<red><white>{target}<red>'s inventory is full. The withdrawal was refunded."
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    cancelled: "<red>Cheque transaction was cancelled by another plugin."
+    insufficient: "<red><white>{target} <red>does not have enough money to create a cheque for <white>{amount}<red>."
+    redeem-failed: "<red>Cheque redemption failed: <white>{reason}"
+  eco:
+    usage: "<red>Usage: /{label} <give|take|set> <player> <amount>"
+    cancelled: "<red>Economy transaction was cancelled by another plugin."
+    updated: "<green>Balance for <white>{player} <green>is now <white>{balance}<green>."
+  baltop:
+    header: "<#44CCFF><bold>Balance Top</bold> <gray>Page {page}"
+    entry: "<gray>{rank}. <white>{player} <dark_gray>- <green>{balance}"
+    empty: "<gray>No balances have been recorded yet."
+
+nickname:
+  usage: "<red>Usage: /{label} [player] <nickname|clear>"
+  console-target-required: "<red>Console must specify a player."
+  others-denied: "<red>You do not have permission to nickname other players."
+  target-offline: "<red>That player is not online."
+  cancelled: "<red>Nickname change was cancelled by another plugin."
+  cleared: "<green>Nickname cleared for <white>{target}<green>."
+  set: "<green>Nickname set for <white>{target}<green>."
+  changed-notice: "<green>Your nickname was changed to <white>{nickname}<green>."
+  validation-error: "<red>{reason}"
+  permission:
+    color: "<red>You need <white>hydroxide.nickname.color <red>to use colored nicknames."
+    hex: "<red>You need <white>hydroxide.nickname.hex <red>to use hex nicknames."
+    gradient: "<red>You need <white>hydroxide.nickname.gradient <red>to use gradient nicknames."
+    rainbow: "<red>You need <white>hydroxide.nickname.rainbow <red>to use rainbow nicknames."
+  realname:
+    usage: "<red>Usage: /{label} <nickname>"
+    found: "<green>That nickname belongs to <white>{player}<green>."
+    missing: "<red>No active nickname matched <white>{nickname}<red>."
+  nameplate:
+    usage: "<red>Usage: /{label} [player] [-pref:<text>] [-suf:<text>] [-c:<color|reset>] [reset] [-s]"
+    updated: "<green>Nameplate for <white>{target}<green> updated. <gray>prefix={prefix}, suffix={suffix}, color={color}"
+    reset: "<green>Nameplate reset for <white>{target}<green>."
+    target-notice: "<green>Your nameplate was updated. <gray>prefix={prefix}, suffix={suffix}, color={color}"
+
+channels:
+  usage: "<red>Usage: /{label} <channel> [message]"
+  denied: "<red>You cannot use the <white>{channel} <red>channel."
+  focused: "<green>Focused chat channel: <white>{channel}"
+  chat-prefix: "<dark_gray>[<#44CCFF>{channel}</#44CCFF>] <white>"
+  chat-separator: "<dark_gray>: <white>"
+  message-format: "<dark_gray>[<#44CCFF>{channel}</#44CCFF>] <white>{player}<dark_gray>: <white>{message}"
+
+social:
+  party:
+    usage: "<red>Usage: /{label} <invite|accept|leave|ff|chat> ..."
+    player-offline: "<red>That player is not online."
+    invited: "<green>Invited <white>{target}<green> to your party."
+    invite-received: "<white>{player} <#44CCFF>invited you to a party. <gray>/party accept"
+    joined: "<green>Joined the party."
+    no-invite: "<red>You do not have a pending party invite."
+    left: "<green>Left your party."
+    friendly-fire: "<green>Party friendly fire: <white>{state}"
+    chat-usage: "<red>Usage: /{label} <message>"
+    not-in-party: "<red>You are not in a party."
+    chat-format: "<dark_gray>[<#44CCFF>Party</#44CCFF>] <white>{player}<dark_gray>: <white>{message}"
+  friend:
+    usage: "<red>Usage: /{label} <add|remove|list> <player>"
+    empty: "<gray>You do not have any friends added."
+    list: "<green>Friends: <white>{friends}"
+    removed: "<green>Removed <white>{target}<green> from your friend list."
+    not-friend: "<red><white>{target} <red>was not on your friend list."
+    added: "<green>Added <white>{target}<green> to your friend list."
+    notify-join: "<white>{player} <green>joined <gray>the server."
+    notify-quit: "<white>{player} <red>left <gray>the server."
+
+mail:
+  usage: "<red>Usage: /{label} [read|send|sendtemp|delete|clear|sendall] ..."
+  send-usage: "<red>Usage: /{label} send <player> <message>"
+  sendtemp-usage: "<red>Usage: /{label} sendtemp <player> <time> <message>"
+  delete-usage: "<red>Usage: /{label} delete <number>"
+  sendall-usage: "<red>Usage: /{label} sendall <message>"
+  mailall-usage: "<red>Usage: /{label} <send|clear|remove> [message]"
+  empty: "<gray>No mail found for <white>{target}<gray>."
+  header: "<#44CCFF><bold>Mail for {target}</bold> <gray>({count})"
+  entry: "<gray>{index}. <white>{sender} <dark_gray>({date}, expires {expires})<gray>: <white>{message}"
+  sent: "<green>Mail sent to <white>{target}<green>."
+  sent-temp: "<green>Temporary mail sent to <white>{target}<green> for <white>{duration}<green>."
+  invalid-duration: "<red>Invalid mail duration <white>{duration}<red>."
+  never-expires: "never"
+  received-online: "<#44CCFF>You have new mail from <white>{sender}<#44CCFF>. <gray>/mail read"
+  unread-notice: "<#44CCFF>You have <white>{count}<#44CCFF> unread mail message(s). <gray>/mail read"
+  cleared: "<green>Cleared <white>{count}<green> mail message(s) for <white>{target}<green>."
+  deleted: "<green>Deleted mail message <white>#{index}<green>."
+  invalid-index: "<red>No mail message exists at index <white>{index}<red>."
+  console-target-required: "<red>Console must specify a player mailbox."
+  console-sender-name: "Console"
+  sendall-complete: "<green>Sent mail to <white>{count}<green> known player(s)."
+  mailall-cleared: "<green>Cleared <white>{count}<green> mail message(s) from all mailboxes."
+  mailall-removed: "<green>Removed <white>{count}<green> matching mail message(s) from all mailboxes."
+
+maintenance:
+  usage: "<red>Usage: /{label} [true|false|status] [message]"
+  enabled: "<green>Maintenance mode enabled. <gray>Message: <white>{message}"
+  disabled: "<green>Maintenance mode disabled."
+  status: "<#44CCFF>Maintenance is <white>{state}<gray>. Message: <white>{message} <dark_gray>(updated by {updated_by}, {updated_at})"
+  kick: "<red>{message}"
+  state:
+    enabled: "<red>enabled"
+    disabled: "<green>disabled"
+
+user-meta:
+  usage: "<red>Usage: /{label} <player> <add|remove|clear|list|increment> [key] [value] [-s]"
+  added: "<green>Set metadata <white>{key} <green>for <white>{target} <green>to <white>{value}<green>."
+  removed: "<green>Removed metadata <white>{key} <green>from <white>{target}<green>."
+  missing: "<yellow>{target} does not have metadata key <white>{key}<yellow>."
+  cleared: "<green>Cleared <white>{count} <green>metadata entries from <white>{target}<green>."
+  empty: "<gray>{target} has no stored metadata."
+  header: "<#44CCFF><bold>User Meta</bold> <gray>for <white>{target} <dark_gray>({count})"
+  entry: "<gray>- <white>{key}<dark_gray>: <#44CCFF>{value}"
+  incremented: "<green>Incremented metadata <white>{key} <green>for <white>{target} <green>to <white>{value}<green>."
+  invalid-number: "<red>Metadata <white>{key} <red>for <white>{target} <red>must be numeric. Current/input value: <white>{value}"
+  changed-notice: "<gray>Your metadata key <white>{key} <gray>was updated."
+
+stats:
+  top:
+    header: "<#44CCFF><bold>Top {stat}</bold>"
+    entry: "<gray>{rank}. <white>{player} <dark_gray>- <#44CCFF>{value}"
+    empty: "<gray>No leaderboard entries have been recorded for <white>{stat}<gray>."
+  playtime:
+    usage: "<red>Usage: /{label} [player]"
+    self: "<green>Your playtime is <white>{time}<green>. <dark_gray>({seconds}s)"
+    other: "<green><white>{player}<green>'s playtime is <white>{time}<green>. <dark_gray>({seconds}s)"
+    unknown: "<red>No recorded playtime was found for <white>{target}<red>."
+  editplaytime:
+    usage: "<red>Usage: /{label} [player] <add|take|set> <amount> [-s]"
+    updated: "<green>Playtime for <white>{player}<green> is now <white>{time}<green>. Requested amount: <white>{amount}<green>. <dark_gray>({seconds}s)"
+    target-notice: "<green>Your playtime was updated to <white>{time}<green>."
+  cplaytime:
+    usage: "<red>Usage: /{label} [player]"
+    title: "<#44CCFF>Playtime <dark_gray>- <white>{player}"
+    total-name: "<#44CCFF>Total Playtime"
+    total-lore: "<gray>{time} <dark_gray>({seconds}s)"
+    session-name: "<#44CCFF>Current Session"
+    session-lore: "<gray>{session} <dark_gray>({session_seconds}s)"
+    kills-name: "<#44CCFF>Player Kills"
+    kills-lore: "<gray>{kills}"
+    deaths-name: "<#44CCFF>Deaths"
+    deaths-lore: "<gray>{deaths}"
+    blocks-name: "<#44CCFF>Blocks Broken"
+    blocks-lore: "<gray>{blocks}"
+    mobs-name: "<#44CCFF>Mobs Killed"
+    mobs-lore: "<gray>{mobs}"
+  playtimetop:
+    usage: "<red>Usage: /{label} [page]"
+    header: "<#44CCFF><bold>Top Playtime</bold> <gray>page <white>{page}"
+    entry: "<gray>{rank}. <white>{player} <dark_gray>- <#44CCFF>{time} <dark_gray>({seconds}s)"
+    empty: "<gray>No playtime leaderboard entries were found for page <white>{page}<gray>."
+
+backups:
+  started: "<green>Backup started asynchronously."
+  completed: "<green>Backup complete: <white>{file}"
+  failed: "<red>Backup failed: <white>{reason}"
+  failed-log: "Backup failed: {reason}"
+
+worlds:
+  usage: "<red>Usage: /{label} <create|load|unload|delete|setrule|list> ..."
+  list: "<green>Worlds: <white>{worlds}"
+  create:
+    usage: "<red>Usage: /{label} create <name> [normal|nether|end] [seed] [generator]"
+    success: "<green>World <white>{world} <green>created."
+    failed: "<red>Unable to create world <white>{world}<red>."
+  load:
+    usage: "<red>Usage: /{label} load <name>"
+    success: "<green>World <white>{world} <green>loaded."
+    failed: "<red>Unable to load world <white>{world}<red>."
+  unload:
+    usage: "<red>Usage: /{label} unload <name>"
+    success: "<green>World <white>{world} <green>unloaded."
+    failed: "<red>Unable to unload world <white>{world}<red>."
+  unloadchunks:
+    usage: "<red>Usage: /{label} [-f]"
+    started: "<green>Queued <white>{chunks}<green> loaded chunk(s) for gradual unload. <dark_gray>Batch: <white>{batch}"
+    done: "<green>Chunk unload complete. <dark_gray>Unloaded: <white>{unloaded}<dark_gray>, skipped/kept: <white>{skipped}"
+    busy: "<red>A chunk unload pass is already running."
+  delete:
+    usage: "<red>Usage: /{label} delete <name>"
+    unload-failed: "<red>Unable to unload world <white>{world} <red>first."
+    unsafe: "<red>Refusing to delete unsafe world path for <white>{world}<red>."
+    success: "<green>World <white>{world} <green>deleted."
+    failed: "<red>Unable to delete world <white>{world}<red>: <white>{reason}"
+  setrule:
+    usage: "<red>Usage: /{label} setrule <world> <gamerule|difficulty|pvp> <value>"
+    not-loaded: "<red>World <white>{world} <red>is not loaded."
+    invalid: "<red>Invalid world setting <white>{setting}<red>=<white>{value}<red>."
+    saved: "<green>Saved <white>{setting}<green>=<white>{value} <green>for <white>{world}<green>."
+  gamerule:
+    usage: "<red>Usage: /{label} [world] <gamerule|difficulty|pvp> <value>"
+    not-loaded: "<red>World <white>{world} <red>is not loaded."
+    invalid: "<red>Invalid world setting <white>{setting}<red>=<white>{value}<red>."
+    saved: "<green>Saved <white>{setting}<green>=<white>{value} <green>for <white>{world}<green>."
+
+teleport:
+  spawn:
+    success: "<green>Teleported to spawn."
+    set: "<green>Spawn location set."
+  home:
+    success: "<green>Teleported to home <white>{home}<green>."
+    set: "<green>Home <white>{home} <green>set."
+    limit-reached: "<red>You have reached your home limit of <white>{limit}<red>."
+    removed: "<green>Home <white>{home} <green>removed."
+    missing: "<red>Home <white>{home} <red>does not exist."
+    empty: "<gray>You do not have any homes."
+    list: "<green>Homes: <white>{homes}"
+  warp:
+    usage: "<red>Usage: /{label} <name>"
+    success: "<green>Warped to <white>{warp}<green>."
+    set-usage: "<red>Usage: /{label} <name>"
+    set: "<green>Warp <white>{warp} <green>set."
+    delete-usage: "<red>Usage: /{label} <name>"
+    removed: "<green>Warp <white>{warp} <green>removed."
+    missing: "<red>Warp <white>{warp} <red>does not exist."
+    empty: "<gray>No warps have been set."
+    list: "<green>Warps: <white>{warps}"
+  back:
+    success: "<green>Returned to your previous location."
+    reset-usage: "<red>Usage: /{label} [player] [-s]"
+    reset-success: "<green>Cleared back location for <white>{target}<green>."
+    reset-missing: "<red>No back location is stored for <white>{target}<red>."
+    reset-target: "<gray>Your back location was cleared by <white>{player}<gray>."
+  deathback:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    missing: "<red>No death location is stored for <white>{target}<red>."
+    success: "<green>Returned to your death location."
+    success-other: "<green>Returned <white>{target}<green> to their death location."
+    target: "<green>You were returned to your death location by <white>{player}<green>."
+  direct:
+    usage: "<red>Usage: /{label} <player> [target]"
+    here-usage: "<red>Usage: /{label} <player>"
+    tpall-usage: "<red>Usage: /{label} [target]"
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    sent: "<green>Teleported to <white>{target}<green>."
+    other: "<green>Teleported <white>{player} <green>to <white>{target}<green>."
+    brought: "<green>Brought <white>{target} <green>to you."
+    brought-target: "<green>You were brought to <white>{target}<green>."
+    all: "<green>Teleported <white>{count} <green>players to <white>{target}<green>."
+    tpallworld-usage: "<red>Usage: /{label} <world> [world;x;y;z[;yaw;pitch]] [-a]"
+    tpallworld-invalid-destination: "<red>Destination must be <white>world;x;y;z <red>or <white>world;x;y;z;yaw;pitch<red>."
+    tpallworld-empty: "<red>No online players were found in world <white>{world}<red>."
+    tpallworld-done: "<green>Teleported <white>{count}<green> player(s) from <white>{source}<green> to <white>{world}<green>."
+  position:
+    usage: "<red>Usage: /{label} [-p:player] <x> <y> <z> [world] [pitch] [yaw]"
+    success: "<green>Teleported to <white>{world} {x}, {y}, {z}<green>."
+  jump:
+    no-target: "<red>No target block found."
+    success: "<green>Jumped to target block."
+  down:
+    usage: "<red>Usage: /{label} [player] [max] [-s]"
+    no-safe-location: "<red>No safe floor was found below <white>{target}<red>."
+    success: "<green>Teleported one floor down."
+    success-other: "<green>Teleported <white>{target} <green>one floor down."
+  world:
+    usage: "<red>Usage: /{label} <normal|nether|end|world> [player] [-s]"
+    not-loaded: "<red>World <white>{world} <red>is not loaded."
+    success: "<green>Teleported to world <white>{world}<green>."
+    success-other: "<green>Teleported <white>{target} <green>to world <white>{world}<green>."
+  patrol:
+    usage: "<red>Usage: /{label} [reset]"
+    none: "<red>No other online players are available to patrol."
+    reset: "<green>Patrol target history reset."
+    success: "<green>Patrolling to <white>{target}<green>."
+  tpa:
+    usage: "<red>Usage: /{label} <player>"
+    target-unavailable: "<red>Player <white>{target} <red>is not available."
+    sent: "<green>Teleport request sent to <white>{target}<green>."
+    received: "<white>{player} <#44CCFF>wants to teleport to you. <gray>/tpaccept <dark_gray>or <gray>/tpdeny"
+    here-sent: "<green>Teleport-here request sent to <white>{target}<green>."
+    here-received: "<white>{player} <#44CCFF>wants you to teleport to them. <gray>/tpaccept <dark_gray>or <gray>/tpdeny"
+    all-usage: "<red>Usage: /{label}"
+    all-sent: "<green>Teleport request sent to <white>{count}<green> player(s). <gray>{skipped} skipped."
+    all-received: "<white>{player} <#44CCFF>wants everyone to teleport to them. <gray>/tpaccept <dark_gray>or <gray>/tpdeny"
+    all-none: "<red>No players are available for /tpaall. <gray>{skipped} skipped."
+    none: "<red>You do not have any pending teleport requests."
+    requester-offline: "<red>That player is no longer online."
+    accepted-requester: "<green>Teleport request accepted by <white>{target}<green>."
+    accepted-target: "<green>Accepted teleport request from <white>{player}<green>."
+    here-accepted-requester: "<green><white>{target} <green>accepted your teleport-here request."
+    here-accepted-target: "<green>Teleporting to <white>{player}<green>."
+    denied-requester: "<red>Your teleport request to <white>{target} <red>was denied."
+    denied-target: "<green>Denied teleport request."
+    cancel-none: "<red>You do not have an outgoing teleport request to cancel."
+    cancelled-requester: "<green>Cancelled your teleport request to <white>{target}<green>."
+    cancelled-target: "<red><white>{player} <red>cancelled their teleport request."
+    target-disabled: "<red><white>{target} <red>is not accepting teleport requests."
+    auto-accepted-requester: "<green><white>{target} <green>automatically accepted your teleport request."
+    auto-accepted-target: "<green>Automatically accepted teleport request from <white>{player}<green>."
+    here-auto-accepted-requester: "<green><white>{target} <green>automatically accepted your teleport-here request."
+    here-auto-accepted-target: "<green>Automatically accepted teleport-here request from <white>{player}<green>."
+  tptoggle:
+    usage: "<red>Usage: /{label} [on|off]"
+    enabled: "<green>You are now accepting teleport requests."
+    disabled: "<red>You are no longer accepting teleport requests."
+  tpauto:
+    usage: "<red>Usage: /{label} [on|off]"
+    enabled: "<green>You will now automatically accept teleport requests."
+    disabled: "<red>You will no longer automatically accept teleport requests."
+  location:
+    missing: "<red>That location has not been set."
+    world-unloaded: "<red>World <white>{world} <red>is not loaded."
+    failed: "<red>Teleport failed."
+
+rtp:
+  searching: "<gray>Searching for a safe location..."
+  cooldown: "<red>RTP is on cooldown for <white>{remaining}<red>."
+  no-location: "<red>Could not find a safe RTP location."
+  cannot-afford: "<red>You cannot afford RTP."
+  failed: "<red>RTP failed."
+  success: "<green>Randomly teleported."
+
+proxy:
+  server:
+    usage: "<red>Usage: /{label} <server> [player] [-f]"
+    sending: "<green>Sending you to <white>{server}<green>."
+    sending-other: "<green>Sending <white>{target}<green> to <white>{server}<green>."
+    target: "<gray><white>{player}<gray> is sending you to <white>{server}<gray>."
+    console-target-required: "<red>Console usage: /{label} <server> <player> [-f]"
+    player-offline: "<red>Player <white>{target}<red> is not online."
+    failed: "<red>Unable to send proxy message."
+  serverlist:
+    header: "<#44CCFF>Proxy servers matching <white>{filter}<gray>: <white>{shown}<gray>/<white>{total}"
+    entry: "<gray>- <white>{server}"
+    empty: "<gray>No configured proxy servers matched <white>{filter}<gray>."
+  sendall:
+    usage: "<red>Usage: /{label} <server>"
+    empty: "<red>No online players are available to send."
+    sending: "<green>Sending <white>{count}<green> player(s) to <white>{server}<green>."
+    failed: "<red>Unable to send all players to <white>{server}<red>. Sent before failure: <white>{count}<red>."
+  network-alert:
+    usage: "<red>Usage: /{label} <message>"
+    no-carrier: "<red>A player must be online to send plugin messages."
+    format: "<dark_gray>[<#44CCFF>Network</#44CCFF>] <white>{message}"
+
+protection:
+  target-required: "<red>Look at a chest, furnace, barrel, door, or similar block."
+  not-owner: "<red>You do not own that lock."
+  locked: "<green>Locked."
+  unlocked: "<green>Unlocked."
+  access-denied: "<red>That block is locked."
+  block-restricted: "<red>That block is restricted in this world."
+
+options:
+  title: "<#44CCFF>Hydroxide Options"
+  unknown: "<red>Unknown option."
+  updated: "<green>Option <white>{option} <green>set to <white>{state}<green>."
+  state:
+    enabled: "<green>Enabled"
+    disabled: "<red>Disabled"
+
+spawn:
+  group:
+    usage: "<red>Usage: /{label} <set|delete> <group> [priority]"
+    deleted: "<green>Deleted spawn group <white>{group}<green>."
+    set: "<green>Set spawn group <white>{group} <green>with priority <white>{priority}<green>."
+  first-join:
+    title: "<#44CCFF><bold>Welcome</bold>"
+    subtitle: "<gray>Enjoy your stay, <white>{player}<gray>!"
+
+portal:
+  usage: "<red>Usage: /{label} <create|delete> <name> [destination] [radius]"
+  create-usage: "<red>Usage: /{label} create <name> <warp|server:name|velocity:x,y,z> [radius]"
+  created: "<green>Portal <white>{portal} <green>created."
+  deleted: "<green>Portal <white>{portal} <green>deleted."
+
+item:
+  usage: "<red>Usage: /{label} <name|lore|model|attribute> ..."
+  hold-required: "<red>Hold an item first."
+  updated: "<green>Updated held item."
+
+armorstand:
+  usage: "<red>Usage: /{label} {actions}"
+  target-required: "<red>Look at an armor stand within 8 blocks."
+  locked: "<red>That armor stand is locked."
+  clipboard-empty: "<red>Your armor stand clipboard is empty."
+  updated: "<green>Armor stand updated."
+
+shop:
+  title: "<#44CCFF>Hydroxide Shop"
+  sign:
+    invalid: "<red>Invalid shop sign."
+    buy-header: "<green>[Buy]"
+    sell-header: "<gold>[Sell]"
+  inventory-full: "<red>You need an empty inventory slot first."
+  invalid-price: "<red>Invalid shop price."
+  cannot-afford: "<red>You cannot afford that purchase."
+  not-enough-items: "<red>You do not have enough items to sell."
+  buy:
+    cancelled: "<red>Purchase was cancelled by another plugin."
+    success: "<green>Purchased <white>{amount}x {material}<green>."
+  sell:
+    cancelled: "<red>Sale was cancelled by another plugin."
+    success: "<green>Sold <white>{amount}x {material}<green>."
+  lore:
+    buy: "<gray>Left click buy: <white>{price}"
+    sell: "<gray>Right click sell: <white>{price}"
+  sell-command:
+    usage: "<red>Usage: /{label} [hand|all|material] [amount]"
+    hold-required: "<red>Hold an item to sell first."
+    unknown-material: "<red>Unknown material: <white>{material}<red>."
+    no-price: "<red>No sell price is configured for <white>{material}<red>."
+    nothing: "<red>You do not have any sellable items."
+    success: "<green>Sold <white>{amount}x {material}<green> for <white>{price}<green>."
+  worth:
+    usage: "<red>Usage: /{label} [hand|material] [amount]"
+    console-material-required: "<red>Usage from console: /{label} <material> [amount]"
+    hold-required: "<red>Hold an item or provide a material."
+    unknown-material: "<red>Unknown material: <white>{material}<red>."
+    no-price: "<red>No sell price is configured for <white>{material}<red>."
+    result: "<white>{amount}x {material}<green> is worth <white>{price}<green> <gray>(each {unit_price})"
+  setworth:
+    usage: "<red>Usage: /{label} [material] <price>"
+    hold-required: "<red>Hold an item or provide a material."
+    unknown-material: "<red>Unknown material: <white>{material}<red>."
+    invalid-price: "<red>Worth must be a finite non-negative amount with at most two decimals."
+    success: "<green>Set <white>{material}<green> sell value to <white>{price}<green>."
+  generateworth:
+    usage: "<red>Usage: /{label} [basePrice] [-overwrite]"
+    success: "<green>Generated worth values: <white>{created}<green> created, <white>{overwritten}<green> overwritten, <white>{skipped}<green> skipped. Backup: <white>{backup}<green>."
+    nothing: "<yellow>No worth values were generated. Existing values skipped: <white>{skipped}<yellow>. Use <white>-overwrite<yellow> to replace them."
+    failed: "<red>Could not generate worth values: <white>{reason}"
+  worthlist:
+    usage: "<red>Usage: /{label} [player] [-missing] [-p:page]"
+    header: "<#44CCFF><bold>Worth List</bold> <gray>{mode} page <white>{page}<gray>/<white>{pages}<gray> <dark_gray>({count} total)"
+    entry: "<gray>{material} <dark_gray>- <green>{price}"
+    missing-entry: "<gray>{material} <dark_gray>- <yellow>missing"
+    empty: "<gray>No worth values are configured. Use <white>/generateworth<gray> or <white>/setworth<gray>."
+    no-missing: "<green>All generated worth candidates have configured sell values."
+    target-offline: "<red>Player <white>{target}<red> is not online."
+    sent: "<green>Sent <white>{mode}<green> worth list to <white>{target}<green>."
+    mode:
+      configured: "configured"
+      missing: "missing"
+
+navigation:
+  homes-title: "<#44CCFF>Hydroxide Homes"
+  warps-title: "<#44CCFF>Hydroxide Warps"
+  home-lore: "<gray>Left click to teleport. Shift-right to delete."
+  warp-lore: "<gray>Click to warp."
+  home-limit-name: "Limit: {limit}"
+  home-limit-lore: "<gray>Current homes: {count}"
+  warmup:
+    started: "<green>Teleporting in <white>{seconds} <green>seconds. Do not move."
+    cancelled-moved: "<red>Teleport cancelled because you moved."
+    cancelled-damaged: "<red>Teleport cancelled because you took damage."
+    cancelled-block-break: "<red>Teleport cancelled because you broke a block."
+
+holograms:
+  usage: "<red>Usage: /{label} create|delete|line|movehere|clone|list|near ..."
+  default-line: "<#44CCFF>Hydroxide Hologram"
+  missing: "<red>That hologram does not exist."
+  unknown-block: "<red>Unknown block."
+  create:
+    usage: "<red>Usage: /{label} create <id> [text|item|block] [value]"
+    item-usage: "<red>Usage: /{label} create <id> item <material>"
+    block-usage: "<red>Usage: /{label} create <id> block <block>"
+    success: "<green>Hologram <white>{id} <green>created."
+  delete:
+    usage: "<red>Usage: /{label} delete <id>"
+    success: "<green>Hologram deleted."
+  line:
+    usage: "<red>Usage: /{label} line add|set|remove <id> ..."
+    set-usage: "<red>Usage: /{label} line set <id> <line> <text>"
+    text-only: "<red>Only text holograms have editable lines."
+    updated: "<green>Hologram lines updated."
+  movehere:
+    usage: "<red>Usage: /{label} movehere <id>"
+    success: "<green>Hologram moved."
+  clone:
+    usage: "<red>Usage: /{label} clone <id> <newId>"
+    success: "<green>Hologram cloned."
+  list:
+    empty: "<gray>No holograms have been created."
+    entries: "<green>Holograms: <white>{entries}"
+  near:
+    empty: "<gray>No nearby holograms."
+    entries: "<green>Nearby holograms: <white>{entries}"
+
+interactions:
+  bind:
+    usage: "<red>Usage: /{label} <console|player> <cost> <cooldown> <command>"
+    entity-missing: "<red>No nearby entity found."
+    entity-bound: "<green>Bound command to nearby entity."
+    block-pending: "<green>Right-click a sign, button, pressure plate, or block to bind this command."
+    block-bound: "<green>Bound command to block."
+  sign:
+    denied-header: "<red>[Denied]"
+    command-header: "<#44CCFF>[Command]"
+  execute:
+    cooldown: "<red>That interaction is on cooldown."
+    cannot-afford: "<red>You cannot afford that interaction."
+
+utility:
+  sign:
+    target-required: "<red>Look at a sign first."
+    edit-usage: "<red>Usage: /{label} <1-4> <text>"
+    updated: "<green>Sign updated."
+    copied: "<green>Sign copied."
+    clipboard-empty: "<red>Your sign clipboard is empty."
+    pasted: "<green>Sign pasted."
+    unknown-dye: "<red>Unknown dye color."
+    glow-updated: "<green>Sign glow updated."
+  book:
+    hold-required: "<red>Hold a writable or written book."
+    usage: "<red>Usage: /{label} title|author|page|addpage|unlock ..."
+    updated: "<green>Book updated."
+    unlocked: "<green>Book unlocked for editing."
+  item:
+    hold-required: "<red>Hold an item first."
+    name-usage: "<red>Usage: /{label} <name>"
+    name-updated: "<green>Item name updated."
+    lore-usage: "<red>Usage: /{label} add|set|remove ..."
+    lore-updated: "<green>Item lore updated."
+    flag-usage: "<red>Usage: /{label} <flag>"
+    flag-updated: "<green>Item flag toggled."
+    flag-unknown: "<red>Unknown item flag."
+    hideflags-usage: "<red>Usage: /{label} <flag|all|clear> [flag...]"
+    hideflags-updated: "<green>Added <white>{count}<green> hidden item flag(s): <white>{flags}<green>."
+    hideflags-cleared: "<green>Cleared <white>{count}<green> hidden item flag(s)."
+    enchant-usage: "<red>Usage: /{label} [add|remove|clear] <enchantment> [level]"
+    enchant-unknown: "<red>Unknown enchantment."
+    enchanted: "<green>Item enchanted."
+    enchant-removed: "<green>Item enchantment removed."
+    enchant-cleared: "<green>Removed <white>{count}<green> enchantment(s) from held item."
+    repair-usage: "<red>Usage: /{label} [hand|all]"
+    repaired: "<green>Item repaired."
+    repaired-all: "<green>Repaired <white>{count}<green> item(s)."
+    repair-cost-usage: "<red>Usage: /{label} <amount>"
+    repair-cost-unsupported: "<red>The held item does not support an anvil repair cost."
+    repair-cost-updated: "<green>Set held item anvil repair cost to <white>{amount}<green>."
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    hold-required-target: "<red><white>{target} <red>is not holding an item."
+    unbreakable-usage: "<red>Usage: /{label} [player] [true|false|toggle]"
+    unbreakable-enabled: "<green>Your held item is now unbreakable."
+    unbreakable-disabled: "<green>Your held item is no longer unbreakable."
+    unbreakable-target-enabled: "<green>Made <white>{target}<green>'s held item unbreakable."
+    unbreakable-target-disabled: "<green>Made <white>{target}<green>'s held item breakable."
+    unbreakable-notify-enabled: "<green>Your held item was made unbreakable."
+    unbreakable-notify-disabled: "<green>Your held item was made breakable."
+    more-usage: "<red>Usage: /{label} [amount]"
+    more-updated: "<green>Updated held stack amount to <white>{amount}<green>."
+    firework-usage: "<red>Usage: /{label} <power [amount]|clear|fire [amount]>"
+    firework-hold-required: "<red>Hold a firework rocket first."
+    firework-power-updated: "<green>Set held firework power to <white>{amount}<green>."
+    firework-cleared: "<green>Cleared held firework effects and reset power."
+    firework-fired: "<green>Launched <white>{amount}<green> firework(s) from the held rocket."
+    dye-usage: "<red>Usage: /{label} <red,green,blue|hex|color|random|clear>"
+    dye-leather-required: "<red>Hold a leather armor piece first."
+    dye-updated: "<green>Dyed held leather armor <white>{color}<green>."
+    dye-cleared: "<green>Cleared held leather armor dye."
+    dye-invalid: "<red>Unknown dye color. Use RGB like <white>255,0,0<red>, hex like <white>#44CCFF<red>, a color name, <white>random<red>, or <white>clear<red>."
+    info-hold-required: "<red>Hold an item first."
+    info-line: "<#44CCFF>{material}<gray> key=<white>{key}<gray> amount=<white>{amount}<gray>/<white>{max_stack}<gray> damage=<white>{damage}<gray> display=<white>{display_name}<gray> lore=<white>{lore_lines}<gray> enchants=<white>{enchantments}"
+    copied: "<green>Item copied."
+    clipboard-empty: "<red>Your item clipboard is empty."
+    pasted: "<green>Item pasted."
+  itemframe:
+    usage: "<red>Usage: /{label} <invisible|fixed|invulnerable|all>"
+    target-required: "<red>Look at an item frame first."
+    updated: "<green>Item frame updated. <gray>visible=<white>{visible}<gray> fixed=<white>{fixed}<gray> invulnerable=<white>{invulnerable}"
+  blockinfo:
+    no-target: "<red>Look at a block within 8 blocks first."
+    line: "<#44CCFF>{material}<gray> key=<white>{key}<gray> location=<white>{location}<gray> light=<white>{light}<gray> biome=<white>{biome}<gray> solid=<white>{solid}"
+  entityinfo:
+    no-target: "<red>Look at an entity within 8 blocks first."
+    line: "<#44CCFF>{type}<gray> key=<white>{key}<gray> name=<white>{name}<gray> uuid=<white>{uuid}<gray> location=<white>{location}<gray> valid=<white>{valid}<gray> dead=<white>{dead}"
+  recipe:
+    usage: "<red>Usage: /{label} [hand|material]"
+    hold-required: "<red>Hold an item or provide a material."
+    unknown-material: "<red>Unknown material: <white>{material}<red>."
+    none: "<red>No recipe was found for <white>{material}<red>."
+    header: "<#44CCFF>Recipe for <white>{material}<gray> ({type})"
+    line: "<gray>{line}"
+    ingredients: "<gray>Ingredients: <white>{ingredients}"
+    transform: "<white>{input} <gray>-> <white>{result}"
+    separator: "<dark_gray> | <white>"
+    empty-slot: "-"
+    unsupported: "<gray>This recipe type cannot be rendered yet."
+    type:
+      shaped: "shaped"
+      shapeless: "shapeless"
+      cooking: "cooking"
+      stonecutting: "stonecutting"
+  attach:
+    usage: "<red>Usage: /{label} <left|right> <player|console> <uses|infinite> <command...>"
+    invalid: "<red>Invalid attached command."
+    console-permission: "<red>You need <white>hydroxide.item.attach.console <red>to bind console commands."
+    attached: "<green>Command attached to item."
+  powertool:
+    usage: "<red>Usage: /{label} <command...|clear>"
+    hold-required: "<red>Hold an item before binding a power tool command."
+    attached: "<green>Power tool bound to <white>/{command}<green>."
+    cleared: "<green>Power tool command cleared from the held item."
+    list-empty: "<gray>The held item has no bound power tool command."
+    list-entry: "<#44CCFF>Power tool<gray>: <white>/{command} <dark_gray>({click}, {executor}, uses={uses})"
+    toggle-usage: "<red>Usage: /{label} [on|off|toggle]"
+    toggle-enabled: "<green>Power tools enabled."
+    toggle-disabled: "<red>Power tools disabled."
+
+builder:
+  protection:
+    build-mode-required: "<red>Build mode is required in this world."
+  mode:
+    others-denied: "<red>You cannot change build mode for others."
+    usage: "<red>Usage: /{label} [player] [on|off|toggle]"
+    enabled-action: "<green>Build mode enabled."
+    disabled-action: "<red>Build mode disabled."
+    updated: "<green>Build mode for <white>{target} <green>is <white>{state}<green>."
+    player-offline: "<red>That player is not online."
+    status: "<#44CCFF>Build status for <white>{target}<gray>: mode=<white>{mode}<gray>, toggles=<white>{toggles}"
+  toggle:
+    updated-action: "<#44CCFF>{toggle} toggle: <white>{state}"
+    usage: "<red>Usage: /{label} toggle <{toggles}> [on|off]"
+    disabled-action: "<red>{toggle} toggle is off."
+  target-block-required: "<red>Look at a block first."
+  pickblock:
+    picked: "<green>Picked <white>{block}<green>."
+  blockcycling:
+    usage: "<red>Usage: /{label} [forward|backward]"
+    changed: "<green>Cycled <white>{block}<green> to <gray>{state}"
+    unsupported: "<red><white>{block} <red>does not expose a supported block state to cycle."
+  wand:
+    name: "<#44CCFF>Hydroxide Builder Wand"
+    added: "<green>Builder wand added."
+  selection:
+    usage: "<red>Usage: /{label} clear|expand|contract|info"
+    cleared: "<green>Selection cleared."
+    incomplete: "<red>No complete selection."
+    volume: "<green>Selection volume: <white>{volume}"
+    updated: "<green>Selection updated."
+    pos1-action: "<green>Position 1 set."
+    pos2-action: "<green>Position 2 set."
+    required: "<red>Select both positions first."
+  edit:
+    usage-block: "<red>Usage: /{label} <block>"
+    usage-replace: "<red>Usage: /{label} <from> <to>"
+    unknown-block: "<red>Unknown block."
+    world-unloaded: "<red>Selection world is not loaded."
+    selection-too-large: "<red>Selection is too large. Limit: <white>{limit}"
+    no-changes: "<gray>No blocks changed."
+    limit-exceeded: "<red>Edit exceeds your block limit of <white>{limit}"
+    already-running: "<red>You already have an edit running."
+    complete-action: "<green>Edit complete: <white>{blocks} <green>blocks."
+    progress-action: "<#44CCFF>Edit progress <white>{current}/{total}"
+  clipboard:
+    copied: "<green>Copied <white>{blocks} <green>blocks."
+    empty: "<red>Your clipboard is empty."
+  history:
+    undo-empty: "<red>Nothing to undo."
+    redo-empty: "<red>Nothing to redo."
+  brush:
+    usage: "<red>Usage: /{label} sphere|cylinder|replace|smooth|none ..."
+    cleared: "<green>Brush cleared."
+    invalid: "<red>Invalid brush arguments."
+    bound: "<green>Brush bound to held item."
+    cooldown-action: "<red>Brush is cooling down."
+    limit-exceeded: "<red>Brush exceeds your block limit."
+    hold-required: "<red>Hold an item first."
+  near:
+    fill-usage: "<red>Usage: /{label} <block> <radius>"
+    fixlight-queued: "<green>Queued nearby light/chunk refresh hint for <white>{chunks}x{chunks} <green>chunks."
+
+afk:
+  tab-name: "<gray>{player} <dark_gray>[AFK]"
+  kick-full: "<gray>Kicked for being AFK while the server is full."
+  usage: "<red>Usage: /{label} [player] [on|off]"
+  enabled: "<green>You are now AFK."
+  disabled: "<green>You are no longer AFK."
+  updated: "<green>Set AFK for <white>{target} <green>to <white>{state}<green>."
+  console-target-required: "<red>Console must specify a player."
+  player-offline: "<red>Player <white>{target} <red>is not online."
+  check:
+    usage: "<red>Usage: /{label} [player|all]"
+    result: "<white>{target} <gray>is {state_color}{state}<gray>."
+    empty: "<gray>No online players are AFK."
+    header: "<green>AFK players online: <white>{count}<green>."
+    entry: "<dark_gray>- <white>{target} <gray>is {state_color}{state}<gray>."
+
+combat:
+  command-blocked: "<red>You cannot use <white>/{command} <red>while combat tagged."
+  logout-broadcast: "<red>{player} logged out during combat and dropped their inventory."
+  bossbar:
+    title: "<red>Combat"
+    countdown: "<red>Combat: <white>{seconds}s"
+
+chat-filter:
+  warning: "<red>Your message was flagged by the chat filter."
+
+redis-bridge:
+  chat-format: "<dark_gray>[<#44CCFF>{server}</#44CCFF>] <white>{player}<dark_gray>: <white>{message}"
+  log:
+    idle: "Redis bridge module enabled but redis-bridge.enabled is false; bridge is idle."
+    publish-failed: "Redis bridge publish failed: {reason}"
+    subscribe-failed: "Redis bridge subscribe failed: {reason}"
+
+server-info:
+  motd:
+    header: "<#44CCFF><bold>Message of the Day</bold>"
+  info:
+    header: "<#44CCFF><bold>Server Info</bold>"
+  rules:
+    header: "<#44CCFF><bold>Server Rules</bold>"
+  empty: "<gray>No {page} lines are configured."
+  ctext:
+    usage: "<red>Usage: /{label} <cText> [player|all] [sourcePlayer]"
+    header: "<#44CCFF><bold>{name}</bold>"
+    missing: "<red>Custom text <white>{name}<red> does not exist."
+    empty: "<gray>Custom text <white>{name}<gray> is empty."
+    sent: "<green>Shown custom text <white>{name}<green> to <white>{count}<green> recipient(s)."
+    no-recipients: "<red>No players matched custom text target <white>{target}<red>."
+    target-offline: "<red>Player <white>{target}<red> is not online."
+  editctext:
+    usage: "<red>Usage: /{label} <list|show|set|delete|enable|disable|reload> [name] [line1 | line2]"
+    list-header: "<#44CCFF>Custom text pages <gray>({count})"
+    list-entry: "<gray>{name} <dark_gray>- <white>{state}<dark_gray>, <white>{lines}<gray> line(s)"
+    show-header: "<#44CCFF>Custom text <white>{name}<gray> <dark_gray>({state}, {lines} line(s))"
+    line: "<dark_gray>{index}. <white>{value}"
+    empty: "<gray>No custom text pages are configured."
+    missing: "<red>Custom text <white>{name}<red> does not exist."
+    invalid-name: "<red>Custom text name <white>{name}<red> may only contain letters, numbers, underscores, and hyphens."
+    saved: "<green>Saved custom text <white>{name}<green> with <white>{lines}<green> line(s)."
+    deleted: "<green>Deleted custom text <white>{name}<green>."
+    enabled: "<green>Enabled custom text <white>{name}<green>."
+    disabled: "<yellow>Disabled custom text <white>{name}<yellow>."
+    reloaded: "<green>Custom text configuration reloaded and defaults verified."
+    save-failed: "<red>Could not save custom text configuration: <white>{reason}"
+    state:
+      enabled: "enabled"
+      disabled: "disabled"
+  helpop:
+    usage: "<red>Usage: /{label} <message>"
+    sent: "<green>Your help request was sent to staff."
+    alert: "<#FFB000><bold>HelpOp</bold> <gray>{player}<dark_gray>: <white>{message}"
+  list:
+    header: "<#44CCFF><bold>Online Players</bold> <gray>{online}/{max} visible <dark_gray>({total} connected)"
+    players: "<white>{players}"
+    empty: "<gray>No visible players are online."
+  ping:
+    self: "<green>Your ping is <white>{ping}ms<green>."
+    other: "<white>{target}<green>'s ping is <white>{ping}ms<green>."
+    console-target-required: "<red>Usage: /ping <player>"
+    player-offline: "<red>Player <white>{target} <red>is not online."
+  gc:
+    header: "<#44CCFF><bold>Server Health</bold>"
+    memory: "<gray>Memory: <white>{used_memory}MB<gray>/<white>{allocated_memory}MB <dark_gray>(max {max_memory}MB)"
+    players: "<gray>Players: <white>{online}<gray>/<white>{max_players}<gray> Worlds: <white>{worlds}"
+    world: "<gray>{world}: <white>{chunks}<gray> chunks, <white>{entities}<gray> entities"
+  tps:
+    header: "<#44CCFF><bold>Server TPS</bold>"
+    values: "<gray>TPS: <white>{one_minute}<gray> / <white>{five_minutes}<gray> / <white>{fifteen_minutes} <dark_gray>(1m, 5m, 15m)"
+    mspt: "<gray>Average MSPT: <white>{mspt}"
+    spikes: "<gray>Worst recent tick: <white>{worst_mspt}ms"
+    usage: "<red>Usage: /{label} [-spikes]"
+  servertime:
+    header: "<#44CCFF><bold>Server Time</bold>"
+    local: "<gray>Local: <white>{time} <dark_gray>({zone})"
+    utc: "<gray>UTC: <white>{time}"
+  setmotd:
+    usage: "<red>Usage: /{label} <newMotd> [-s]"
+    saved: "<green>Server-list MOTD updated with <white>{lines}<green> line(s)."
+    broadcast: "<#FFB000>{player}<gray> updated the server-list MOTD with <white>{lines}<gray> line(s)."
+  status:
+    header: "<#44CCFF><bold>Server Status</bold>"
+    version: "<gray>Hydroxide: <white>{plugin_version}<gray> Server: <white>{server_version}<gray> Java: <white>{java_version}"
+    uptime: "<gray>Uptime: <white>{uptime}"
+    performance: "<gray>Performance: <white>{tps}<gray> TPS, <white>{mspt}<gray> MSPT"
+    memory: "<gray>Memory: <white>{used_memory}MB<gray>/<white>{max_memory}MB"
+    players: "<gray>Players: <white>{online}<gray>/<white>{max_players}<gray> Worlds: <white>{worlds}"
+  maxplayers:
+    usage: "<red>Usage: /{label} [amount]"
+    current: "<green>Maximum players: <white>{amount}<green>. Online now: <white>{online}<green>."
+    updated: "<green>Maximum players changed to <white>{amount}<green>. Online now: <white>{online}<green>."
+
+environment:
+  world-not-found: "<red>World <white>{world} <red>was not found."
+  time:
+    usage: "<red>Usage: /{label} <day|noon|night|midnight|ticks> [world]"
+    changed: "<green>Set time in <white>{world} <green>to <white>{time} <dark_gray>({ticks})<green>."
+    invalid: "<red>Unknown time value <white>{value}<red>."
+  weather:
+    usage: "<red>Usage: /{label} <sun|storm|thunder> [durationSeconds] [world]"
+    changed: "<green>Set weather in <white>{world} <green>to <white>{weather} <green>for <white>{duration}s<green>."
+    invalid: "<red>Unknown weather value <white>{value}<red>."
+  ptime:
+    usage: "<red>Usage: /{label} <reset|day|noon|night|midnight|ticks> [player]"
+    changed: "<green>Set personal time for <white>{target} <green>to <white>{time} <dark_gray>({ticks})<green>."
+    reset: "<green>Reset personal time for <white>{target}<green>."
+    invalid: "<red>Unknown personal time value <white>{value}<red>."
+  pweather:
+    usage: "<red>Usage: /{label} <reset|sun|storm|thunder> [player]"
+    changed: "<green>Set personal weather for <white>{target} <green>to <white>{weather}<green>."
+    reset: "<green>Reset personal weather for <white>{target}<green>."
+    invalid: "<red>Unknown personal weather value <white>{value}<red>."
+  console-target-required: "<red>Console must specify a player."
+  player-offline: "<red>Player <white>{target} <red>is not online."
+
+moderation:
+  player-offline: "<red>Player <white>{target} <red>is not online."
+  console-target-required: "<red>Console must specify a player."
+  fly:
+    updated: "<green>Flight {state_color}{state} <green>for <white>{target}<green>."
+    changed: "<green>Flight {state_color}{state}<green>."
+  god:
+    updated: "<green>God mode {state_color}{state} <green>for <white>{target}<green>."
+    changed: "<green>God mode {state_color}{state}<green>."
+  temporary:
+    usage: "<red>Usage: /{label} <player> [timeInSec|+seconds|0] [-s]"
+    enabled: "<green>{mode} enabled for <white>{target}<green>: <white>{duration}<green>."
+    status: "<green>{mode} for <white>{target}<green>: <white>{status}<green>."
+    expired: "<red>{mode} has expired."
+    until-relog: "until relog"
+    inactive: "inactive"
+  heal:
+    usage: "<red>Usage: /{label} [player|all] [amount|percent]"
+    invalid: "<red>Heal amount must be a positive number or a percent from <white>1% <red>to <white>100%<red>."
+    done: "<green>Healed <white>{target}<green>."
+    updated: "<green>Healed <white>{targets}<green> player(s) by <white>{amount}<green>."
+  feed:
+    usage: "<red>Usage: /{label} [player|all] [-s]"
+    done: "<green>Fed <white>{target}<green>."
+    updated: "<green>Fed <white>{targets}<green> player(s)."
+  hunger:
+    usage: "<red>Usage: /{label} <player|all> <0-20>"
+    invalid: "<red>Hunger amount must be a whole number from <white>0 <red>to <white>20<red>."
+    updated: "<green>Set hunger to <white>{amount}<green> for <white>{targets}<green> player(s)."
+  saturation:
+    usage: "<red>Usage: /{label} <player|all> <0-20>"
+    invalid: "<red>Saturation amount must be a number from <white>0 <red>to <white>20<red>."
+    updated: "<green>Set saturation to <white>{amount}<green> for <white>{targets}<green> player(s)."
+  maxhp:
+    usage: "<red>Usage: /{label} <set|add|take|clear> [player] [amount]"
+    invalid: "<red>Maximum health must stay between <white>1 <red>and <white>2048<red>."
+    updated: "<green>Set max health for <white>{target}<green> to <white>{amount}<green>."
+  scale:
+    usage: "<red>Usage: /{label} <set|add|take|clear> [player] [amount] [-s]"
+    invalid: "<red>Scale must stay between <white>{min}<red> and <white>{max}<red>."
+    updated: "<green>Set scale for <white>{target}<green> to <white>{amount}<green>."
+  glow:
+    usage: "<red>Usage: /{label} [player] [on|off|toggle|color]"
+    updated: "<green>Glow for <white>{target} <green>is now {state_color}{state}<green> with color <white>{color}<green>."
+    color-denied: "<red>You do not have permission to use glow color <white>{color}<red>."
+  notarget:
+    usage: "<red>Usage: /{label} [player] [true|false|toggle]"
+    updated: "<green>No-target for <white>{target} <green>is now <white>{state}<green>."
+  playercollision:
+    usage: "<red>Usage: /{label} [player] [true|false|toggle] [-s]"
+    updated: "<green>Player collision for <white>{target} <green>is now <white>{state}<green>."
+  cuff:
+    usage: "<red>Usage: /{label} <player> [true|false|toggle] [-s]"
+    updated: "<green>Cuff state for <white>{target} <green>is now <white>{state}<green>."
+    blocked: "<red>You are cuffed and cannot perform that action."
+  speed:
+    usage: "<red>Usage: /{label} <1-10> [walk|fly] [player]"
+    invalid: "<red>Speed must be a number from 1 to 10."
+    updated: "<green>Set <white>{type} <green>speed for <white>{target} <green>to <white>{speed}<green>."
+  gamemode:
+    usage: "<red>Usage: /{label} <mode> [player]"
+    unknown: "<red>Unknown gamemode <white>{mode}<red>."
+    updated: "<green>Set <white>{target} <green>to <white>{mode}<green>."
+  effect:
+    usage: "<red>Usage: /{label} <player|all> <effect|clear> [seconds] [amplifier] [-visual]"
+    unknown: "<red>Unknown potion effect: <white>{effect}<red>."
+    applied: "<green>Applied <white>{effect}<green> to <white>{targets}<green> player(s) for <white>{duration}s<green> at amplifier <white>{amplifier}<green>."
+    cleared: "<green>Cleared <white>{count}<green> active effect(s) from <white>{targets}<green> player(s)."
+    none: "<gray>No active potion effects were found."
+  air:
+    usage: "<red>Usage: /{label} <player|all> <ticks|max>"
+    updated: "<green>Set remaining air for <white>{targets}<green> player(s) to <white>{amount}<green>."
+  falldistance:
+    usage: "<red>Usage: /{label} <player|all> <distance>"
+    invalid: "<red>Fall distance must be a number from <white>0 <red>to <white>10000<red>."
+    updated: "<green>Set fall distance to <white>{distance}<green> for <white>{targets}<green> player(s)."
+  kick:
+    usage: "<red>Usage: /{label} <player|all> [reason] [-s]"
+    default-reason: "Kicked from server."
+    success: "<green>Kicked <white>{target}<green>: <white>{reason}"
+    success-all: "<green>Kicked <white>{targets}<green> player(s): <white>{reason}"
+    bypassed: "<yellow>Skipped protected kick target(s): <white>{targets}"
+    target: "<red>You were kicked by <white>{player}<red>.\n<gray>{reason}"
+  ban:
+    usage: "<red>Usage: /{label} <player> [reason]"
+    default-reason: "Banned from server."
+    success: "<green>Banned <white>{target}<green>: <white>{reason}"
+    target: "<red>You were banned by <white>{player}<red>.\n<gray>{reason}"
+  banlist:
+    usage: "<red>Usage: /{label} [page]"
+    empty: "<gray>There are no active profile bans."
+    header: "<#44CCFF>Active bans <gray>(page <white>{page}<gray>/<white>{pages}<gray>, <white>{count}<gray> total)"
+    entry: "<dark_gray>{index}. <white>{target} <gray>expires <white>{expires}<gray>; reason: <white>{reason}<gray>; source: <white>{source}"
+    no-reason: "No reason provided"
+    unknown-target: "unknown"
+    unknown-source: "unknown"
+    unknown-date: "unknown"
+    never: "never"
+  checkban:
+    usage: "<red>Usage: /{label} <player>"
+    not-banned: "<green><white>{target} <green>is not banned."
+    banned: "<red><white>{target} <red>is banned. <gray>Expires: <white>{expires}<gray>. Reason: <white>{reason}<gray>. Source: <white>{source}<gray>. Created: <white>{created}<gray>."
+  tempban:
+    usage: "<red>Usage: /{label} <player> <duration> [reason]"
+    default-reason: "Temporarily banned from server."
+    invalid-duration: "<red>Invalid duration <white>{duration}<red>. Use formats like <white>1d2h30m<red>."
+    success: "<green>Temporarily banned <white>{target} <green>for <white>{duration}<green>: <white>{reason}"
+    target: "<red>You were temporarily banned by <white>{player}<red>.\n<gray>{reason}"
+  unban:
+    usage: "<red>Usage: /{label} <player>"
+    success: "<green>Unbanned <white>{target}<green>."
+  ipban:
+    usage: "<red>Usage: /{label} <ip|player> [reason] [-s]"
+    default-reason: "IP banned from server."
+    success: "<green>IP-banned <white>{target}<green> (<white>{ip}<green>): <white>{reason}"
+    bypassed: "<yellow>Skipped protected IP-ban target: <white>{target}"
+    invalid-target: "<red>Provide a valid IP address or an online player with a visible address: <white>{target}<red>."
+    target: "<red>Your IP was banned by <white>{player}<red>.\n<gray>{reason}"
+  ipbanlist:
+    usage: "<red>Usage: /{label} [page]"
+    empty: "<gray>There are no active IP bans."
+    header: "<#44CCFF>Active IP bans <gray>(page <white>{page}<gray>/<white>{pages}<gray>, <white>{count}<gray> total)"
+    entry: "<dark_gray>{index}. <white>{target} <gray>expires <white>{expires}<gray>; reason: <white>{reason}<gray>; source: <white>{source}"
+  unbanip:
+    usage: "<red>Usage: /{label} <ip>"
+    success: "<green>Unbanned IP <white>{target}<green>."
+  mute:
+    usage: "<red>Usage: /{label} <player> [reason]"
+    default-reason: "Muted."
+    success: "<green>Muted <white>{target}<green>: <white>{reason}"
+    notice: "<red>You were muted by <white>{player}<red>.\n<gray>{reason}"
+    blocked: "<red>You are muted for <white>{remaining}<red>: <gray>{reason}"
+  tempmute:
+    usage: "<red>Usage: /{label} <player> <duration> [reason]"
+    default-reason: "Temporarily muted."
+    invalid-duration: "<red>Invalid duration <white>{duration}<red>. Use formats like <white>1d2h30m<red>."
+    success: "<green>Temporarily muted <white>{target} <green>for <white>{duration}<green>: <white>{reason}"
+    notice: "<red>You were temporarily muted by <white>{player} <red>for <white>{duration}<red>.\n<gray>{reason}"
+  unmute:
+    usage: "<red>Usage: /{label} <player>"
+    success: "<green>Unmuted <white>{target}<green>."
+    not-muted: "<gray><white>{target} <gray>was not muted."
+    notice: "<green>You were unmuted by <white>{player}<green>."
+  warn:
+    usage: "<red>Usage: /{label} <player> <reason>"
+    success: "<green>Warned <white>{target}<green>: <white>{reason} <dark_gray>({count} total)"
+    notice: "<red>You were warned by <white>{player}<red>: <gray>{reason} <dark_gray>({count} total)"
+  warnings:
+    usage: "<red>Usage: /{label} <player>"
+    empty: "<gray><white>{target} <gray>has no warnings."
+    header: "<#44CCFF>Warnings for <white>{target}<gray>: <white>{count}"
+    entry: "<gray>{index}. <white>{reason} <dark_gray>- <gray>{issuer}, {created_at}"
+  clearwarnings:
+    usage: "<red>Usage: /{label} <player>"
+    success: "<green>Cleared <white>{count} <green>warnings for <white>{target}<green>."
+  editwarnings:
+    usage: "<red>Usage: /{label} <player|clearall> [clear]"
+    cleared-player: "<green>Cleared <white>{count}<green> warning(s) for <white>{target}<green>."
+    cleared-all: "<green>Cleared <white>{count}<green> warning(s) across all players."
+
+admin:
+  player-offline: "<red>Player <white>{target} <red>is not online."
+  menu:
+    trash: "<#44CCFF>Trash"
+    workbench: "<#44CCFF>Workbench"
+    anvil: "<#44CCFF>Anvil"
+    cartography: "<#44CCFF>Cartography"
+    smithing: "<#44CCFF>Smithing"
+    stonecutter: "<#44CCFF>Stonecutter"
+    loom: "<#44CCFF>Loom"
+    grindstone: "<#44CCFF>Grindstone"
+    usage: "<red>Usage: /{label} [player] [-s]"
+    opened-other: "<green>Opened <white>{menu}<green> for <white>{target}<green>."
+    opened-target: "<gray><white>{player}<gray> opened <white>{menu}<gray> for you."
+  invsee:
+    usage: "<red>Usage: /{label} <player>"
+  inventory-snapshot:
+    save-usage: "<red>Usage: /{label} <player> [id] [-s]"
+    check-usage: "<red>Usage: /{label} <player> [id|last] [-e]"
+    load-usage: "<red>Usage: /{label} <source> <target> [id|last]"
+    list-usage: "<red>Usage: /{label} <player>"
+    remove-usage: "<red>Usage: /{label} <player> [id|all|last]"
+    saved: "<green>Saved inventory snapshot <white>{id}<green> for <white>{target}<green>."
+    saved-target: "<gray>Your inventory was saved by <white>{player}<gray>. <dark_gray>(<white>{id}<dark_gray>)"
+    list-header: "<#44CCFF>Inventory snapshots for <white>{target}<gray>: <white>{count}"
+    list-entry: "<gray>- <white>{id} <dark_gray>({created_at})"
+    empty: "<gray>No inventory snapshots saved for <white>{target}<gray>."
+    missing: "<red>No inventory snapshot <white>{id}<red> for <white>{target}<red>."
+    preview-title-prefix: "Inventory "
+    preview-title: "<#44CCFF>Inventory <white>{target}<gray>: <white>{id}"
+    edit-title-prefix: "Inventory Edit "
+    edit-title: "<#44CCFF>Inventory Edit <white>{target}<gray>: <white>{id}"
+    loaded: "<green>Loaded inventory snapshot <white>{id}<green> from <white>{source}<green> onto <white>{target}<green>."
+    removed: "<green>Removed <white>{count}<green> inventory snapshot(s) for <white>{target}<green>."
+    removeall-confirm: "<red>Run <white>/invremoveall confirmed <red>to remove every saved inventory snapshot."
+    removeall-success: "<green>Removed all inventory snapshots. <dark_gray>(<white>{count}<dark_gray> player record(s))"
+  give:
+    usage: "<red>Usage: /{label} <player> <item> [amount] [n <name>] [l <lore>] [e <enchant:level>] [unbreakable] [-slot:n] [-s]"
+    invalid-item: "<red>Unknown item: <white>{item}<red>."
+    invalid-enchant: "<red>Unknown enchantment: <white>{enchantment}<red>."
+    sent: "<green>Gave <white>{amount}x {item}<green> to <white>{target}<green>. <dark_gray>Dropped overflow: <white>{dropped}"
+    received: "<green>You received <white>{amount}x {item}<green> from <white>{player}<green>."
+  giveall:
+    usage: "<red>Usage: /{label} <item> [amount] [n <name>] [l <lore>] [e <enchant:level>] [unbreakable] [-s]"
+    sent: "<green>Gave <white>{amount}x {item}<green> to <white>{targets}<green> online player(s). <dark_gray>Dropped overflow: <white>{dropped}"
+  donate:
+    usage: "<red>Usage: /{label} <player> [amount] [-s]"
+    empty: "<red>Hold an item first."
+    self: "<red>You cannot donate items to yourself."
+    not-enough: "<red>You are only holding <white>{available}<red> item(s)."
+    sent: "<green>Donated <white>{amount}x {item}<green> to <white>{target}<green>. <dark_gray>Dropped overflow: <white>{dropped}"
+    received: "<green>You received <white>{amount}x {item}<green> from <white>{player}<green>."
+  endersee:
+    usage: "<red>Usage: /{label} <player>"
+  enderchest:
+    usage: "<red>Usage: /{label} [source] [viewer] [-s]"
+    opened-other: "<green>Opened <white>{source}<green>'s ender chest for <white>{viewer}<green>."
+    opened-target: "<gray><white>{player}<gray> opened <white>{source}<gray>'s ender chest for you."
+  clearender:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    self: "<green>Your ender chest has been cleared."
+    other: "<green>Cleared ender chest for <white>{target}<green>."
+    target: "<red>Your ender chest was cleared by <white>{player}<red>."
+  condense:
+    usage: "<red>Usage: /{label} [material]"
+    unknown-material: "<red>Unknown material: <white>{material}<red>."
+    unsupported: "<red><white>{material} <red>cannot be condensed."
+    nothing: "<red>You do not have enough condensable items."
+    success: "<green>Condensed <white>{consumed}<green> items into <white>{produced}<green> compact item(s)."
+  uncondense:
+    usage: "<red>Usage: /{label} [material|all] [player] [-s]"
+    unknown-material: "<red>Unknown material: <white>{material}<red>."
+    unsupported: "<red><white>{material} <red>cannot be uncondensed."
+    nothing: "<red>No compact items could be uncondensed for <white>{target}<red>."
+    success: "<green>Uncondensed <white>{consumed}<green> compact item(s) into <white>{produced}<green> ingredient item(s)."
+    success-other: "<green>Uncondensed <white>{consumed}<green> compact item(s) into <white>{produced}<green> ingredient item(s) for <white>{target}<green>."
+    target: "<gray><white>{player}<gray> uncondensed compact items in your inventory."
+    console-target-required: "<red>Console usage: /{label} [material|all] <player> [-s]"
+  clearinventory:
+    usage: "<red>Usage: /{label} [player|all] [material[:amount]] [+quickbar|+inventory|+partinventory|+weapons|+armorslots|+tools|+armors|+mainhand|+offhand] [-s]"
+    self: "<green>Your inventory has been cleared. <dark_gray>(<white>{count}<dark_gray> item(s))"
+    other: "<green>Cleared inventory for <white>{target}<green>. <dark_gray>(<white>{count}<dark_gray> item(s))"
+    all: "<green>Cleared inventories for <white>{targets}<green> player(s). <dark_gray>(<white>{count}<dark_gray> item(s))"
+    target: "<red>Your inventory was cleared by <white>{player}<red>."
+    unknown-material: "<red>Unknown material <white>{material}<red>."
+    nothing: "<gray>No matching inventory items were found across <white>{targets}<gray> target(s)."
+  hat:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    empty: "<red>Hold an item first."
+    empty-target: "<red><white>{target} <red>is not holding an item."
+    updated: "<green>Hat updated."
+    updated-other: "<green>Updated <white>{target}<green>'s hat."
+    updated-target: "<gray><white>{player}<gray> updated your hat."
+  skull:
+    name: "<#44CCFF>{target}'s Head"
+    given: "<green>Gave you <white>{target}<green>'s head."
+  suicide:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    done: "<red>You chose to respawn."
+    done-other: "<green>Forced <white>{target}<green> to respawn."
+    target: "<red>You were forced to respawn by <white>{player}<red>."
+    console-target-required: "<red>Console usage: /{label} <player> [-s]"
+  kill:
+    usage: "<red>Usage: /{label} <player> [-force] [damageCause] [-s] [-lightning]"
+    done: "<green>Killed <white>{target}<green>."
+    target: "<red>You were killed by <white>{player}<red>."
+    invalid-cause: "<red>Unknown damage cause. Use a Bukkit damage cause such as <white>fall<red>, <white>fire_tick<red>, or <white>void<red>."
+  killall:
+    usage: "<red>Usage: /{label} [-monsters|-animals|-ambient|-pets|-all] [-m:type] [-r:radius] [-w:world] [-named] [-lightning] [-list]"
+    done: "<green>Removed <white>{count}<green> non-player living entity(s) in <white>{worlds}<green>."
+    list: "<green>Available killall filters: <white>{filters}"
+    invalid-entity: "<red>Unknown entity type <white>{entity}<red>."
+    world-not-found: "<red>World <white>{world} <red>was not found."
+    console-radius: "<red>Console cannot use radius cleanup without a player location."
+  groundclean:
+    usage: "<red>Usage: /{label} [+cm] [+cb] [+ci] [+b] [+tnt] [+sh] [+all] [-r:radius] [-w:world] [-s]"
+    remove-usage: "<red>Usage: /{label} <all|drops|xp|projectiles|boats|minecarts|tnt|fallingblocks|mobs|monsters|animals|named|tamed> [radius|world]"
+    done: "<green>Removed <white>{count}<green> entity/entities with <white>{mode}<green> in <white>{worlds}<green>."
+    broadcast: "<#FFB000>Ground cleanup removed <white>{count}<#FFB000> entity/entities in <white>{worlds}<#FFB000>."
+    world-not-found: "<red>World <white>{world} <red>was not found."
+    console-radius: "<red>Console cannot use radius cleanup without a player location."
+  extinguish:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    done: "<green>Extinguished <white>{target}<green>."
+    target: "<green>You were extinguished by <white>{player}<green>."
+  burn:
+    usage: "<red>Usage: /{label} <player> [time] [-s]"
+    done: "<green>Set <white>{target} <green>on fire for <white>{seconds}s<green>."
+    target: "<red>You were set on fire by <white>{player} <red>for <white>{seconds}s<red>."
+  lightning:
+    usage: "<red>Usage: /{label} <player|world;x;y;z> [-safe] [-s]"
+    done: "<green>Struck <white>{target} <green>with lightning."
+    target: "<red>You were struck by lightning from <white>{player}<red>."
+    world-not-found: "<red>World <white>{world}<red> is not loaded."
+  fireball:
+    usage: "<red>Usage: /{label} [small|large|dragon] [player] [-s]"
+    done: "<green>Launched a <white>{type}<green> fireball from <white>{target}<green>."
+    target: "<green><white>{player}<green> launched a <white>{type}<green> fireball from you."
+    invalid-type: "<red>Unknown fireball type <white>{type}<red>. Use <white>small<red>, <white>large<red>, or <white>dragon<red>."
+    console-target-required: "<red>Usage from console: /{label} [small|large|dragon] <player> [-s]"
+  kittycannon:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    done: "<green>Launched an exploding kitten from <white>{target}<green>."
+    target: "<green><white>{player}<green> launched an exploding kitten from you."
+    console-target-required: "<red>Usage from console: /{label} <player> [-s]"
+  beezooka:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    done: "<green>Launched an exploding bee from <white>{target}<green>."
+    target: "<green><white>{player}<green> launched an exploding bee from you."
+    console-target-required: "<red>Usage from console: /{label} <player> [-s]"
+  antioch:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    done: "<green>Launched a primed TNT grenade from <white>{target}<green>."
+    target: "<green><white>{player}<green> launched a primed TNT grenade from you."
+    console-target-required: "<red>Usage from console: /{label} <player> [-s]"
+  nuke:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    done: "<green>Rained <white>{count}<green> primed TNT around <white>{target}<green>."
+    target: "<green><white>{player}<green> rained <white>{count}<green> primed TNT around you."
+    console-target-required: "<red>Usage from console: /{label} <player> [-s]"
+  exp:
+    usage: "<red>Usage: /{label} [show|give|take|set] [player] [levels]"
+    check-usage: "<red>Usage: /{label} [player]"
+    status: "<green><white>{target} <green>is level <white>{level} <dark_gray>({progress}% progress)<green>."
+    updated: "<green>Experience <white>{action}<green> for <white>{target}<green>: <white>{levels} <green>level(s). Current level: <white>{level}<green>."
+    target: "<green>Your experience was changed by <white>{player}<green>: <white>{action} {levels} <green>level(s). Current level: <white>{level}<green>."
+    invalid-amount: "<red>Invalid experience level amount: <white>{amount}<red>."
+  location:
+    usage: "<red>Usage: /{label} [player]"
+    position: "<#44CCFF>{target}<gray>: <white>{world} {x}, {y}, {z} <dark_gray>({direction}, yaw {yaw}, pitch {pitch})"
+    compass: "<green>You are facing <white>{direction}<green>."
+    compass-usage: "<red>Usage: /{label} [target] [source|x z [world]] [-s] or /{label} reset [target] [-s]"
+    compass-set: "<green>Set <white>{target}<green>'s compass target to <white>{world} {x}, {z}<green>."
+    compass-target: "<green>Your compass target was set to <white>{world} {x}, {z}<green> by <white>{player}<green>."
+    compass-reset: "<green>Compass target reset to your world spawn."
+    compass-reset-other: "<green>Reset <white>{target}<green>'s compass target to their world spawn."
+    world-not-found: "<red>World <white>{world}<red> is not loaded."
+    depth: "<green>You are <white>{distance} <green>blocks {relation} sea level <dark_gray>({sea_level})<green>."
+  findbiome:
+    usage: "<red>Usage: /{label} <biome|stop|stopall> [-r:radius]"
+    started: "<green>Searching for <white>{biome}<green> within <white>{radius}<green> blocks in <white>{world}<green>."
+    found: "<green>Nearest <white>{biome}<green>: <white>{world} {x}, {y}, {z}<green> <dark_gray>({distance} blocks)"
+    not-found: "<yellow>No <white>{biome}<yellow> biome was found within <white>{radius}<yellow> blocks."
+    invalid-biome: "<red>Unknown biome <white>{biome}<red>."
+    already-running: "<yellow>You already have a pending biome search. Use <white>/findbiome stop<yellow> first."
+    stopped: "<yellow>Stopped your pending biome search."
+    stopped-all: "<yellow>Stopped <white>{count}<yellow> pending biome search(es)."
+    none-running: "<yellow>No biome search is currently pending."
+    console-target-required: "<red>Console usage: /{label} stopall"
+  counter:
+    usage: "<red>Usage: /{label} <join|leave|start> [t:time] [r:range|-1] [c:world:x:y:z] [msg:message] [-f]"
+    started: "<green>Started a counter for <white>{players}<green> player(s), <white>{seconds}s<green>, range <white>{range}<green>."
+    invited: "<#44CCFF>A counter is starting nearby. Use <white>/counter join<#44CCFF> to join."
+    joined: "<green>You joined the active counter with <white>{seconds}s<green> remaining."
+    left: "<green>You left the active counter."
+    no-active: "<red>No counter is currently active."
+    already-joined: "<yellow>You are already in the active counter."
+    not-joined: "<yellow>You are not in the active counter."
+    out-of-range: "<red>You are outside the active counter range."
+    no-participants: "<red>No eligible players were found for that counter."
+    world-not-found: "<red>World <white>{world}<red> is not loaded."
+    tick: "{message} <white>{seconds}"
+    complete: "{message} <green>Go!"
+    cancelled: "<yellow>The active counter was cancelled."
+  spawnmob:
+    usage: "<red>Usage: /{label} <entity> [amount] [player] [-s]"
+    done: "<green>Spawned <white>{amount}x {entity}<green> at <white>{target}<green>'s location."
+    target: "<green><white>{player}<green> spawned <white>{amount}x {entity}<green> at your location."
+    invalid-entity: "<red>Unknown entity type <white>{entity}<red>."
+    not-spawnable: "<red>Entity type <white>{entity}<red> cannot be spawned."
+    amount-limited: "<red>Requested amount <white>{amount}<red> exceeds the configured limit of <white>{max}<red>."
+    console-target-required: "<red>Usage from console: /{label} <entity> [amount] <player> [-s]"
+    no-type-permission: "<red>You need <white>{permission}<red> to spawn <white>{entity}<red>."
+  spawner:
+    usage: "<red>Usage: /{label} <entity> [player] [-s]"
+    done: "<green>Set targeted spawner for <white>{target}<green> to <white>{entity}<green>."
+    target: "<green><white>{player}<green> set your targeted spawner to <white>{entity}<green>."
+    invalid-entity: "<red>Unknown entity type <white>{entity}<red>."
+    not-spawnable: "<red><white>{entity}<red> cannot be used in a spawner."
+    no-target-block: "<red><white>{target}<red> is not looking at a block within range."
+    not-spawner: "<red>The targeted block is not a spawner."
+    console-target-required: "<red>Usage from console: /{label} <entity> <player> [-s]"
+    no-type-permission: "<red>You need <white>{permission}<red> to set a spawner to <white>{entity}<red>."
+  solve:
+    usage: "<red>Usage: /{label} <equation>"
+    result: "<#44CCFF>{equation}<gray> = <white>{result}"
+    invalid: "<red>Could not solve <white>{equation}<red>."
+  sound:
+    usage: "<red>Usage: /{label} <sound> [-p:pitch] [-v:volume] [player|-all|-l:player|world;x;y;z] [-r:radius] [-s]"
+    done: "<green>Played <white>{sound}<green> for <white>{count}<green> player(s) at <white>{target}<green>."
+    invalid-sound: "<red>Unknown sound <white>{sound}<red>."
+    player-location-offline: "<red>Could not find online player <white>{target}<red> for a location sound."
+    world-not-found: "<red>World <white>{world}<red> is not loaded."
+    no-recipients: "<red>No online players could hear <white>{sound}<red>."
+  shakeitoff:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    done: "<green>Dismounted <white>{count}<green> rider(s)."
+    done-other: "<green>Dismounted <white>{count}<green> rider(s) from <white>{target}<green>."
+    target: "<gray><white>{player}<gray> dismounted <white>{count}<gray> rider(s) from you."
+    none: "<gray><white>{target}<gray> has no riders to dismount."
+  ride:
+    no-target: "<red>Look at an entity within <white>{range}<red> blocks first."
+    no-type-permission: "<red>You need <white>{permission}<red> to ride <white>{type}<red>."
+    done: "<green>Riding <white>{target}<green> (<gray>{type}<green>)."
+    failed: "<red>Could not ride <white>{target}<red> (<gray>{type}<red>)."
+  break:
+    usage: "<red>Usage: /{label} [player] [-s]"
+    done: "<green>Broke <white>{block}<green> at <white>{target}<green>'s target block."
+    target: "<green><white>{player}<green> broke <white>{block}<green> where you were looking."
+    no-target-block: "<red><white>{target}<red> is not looking at a block within range."
+    cancelled: "<red>Could not break <white>{block}<red> at <white>{target}<red>'s target block."
+    console-target-required: "<red>Usage from console: /{label} <player> [-s]"
+  tree:
+    usage: "<red>Usage: /{label} [type] [-p:player]"
+    done: "<green>Generated a <white>{type}<green> tree using <white>{target}<green>'s target block."
+    target: "<green><white>{player}<green> generated a <white>{type}<green> tree where you were looking."
+    invalid-type: "<red>Unknown tree type <white>{type}<red>."
+    no-target-block: "<red><white>{target}<red> is not looking at a block within range."
+    failed: "<red>Could not generate a <white>{type}<red> tree at <white>{target}<red>'s target block."
+    console-target-required: "<red>Usage from console: /{label} [type] -p:<player>"
+  launch:
+    usage: "<red>Usage: /{label} [player] [p:power] [a:angle] [d:direction] [loc:x:y:z] [-nodamage] [-s]"
+    done: "<green>Launched <white>{target}<green>."
+    target: "<green>You were launched by <white>{player}<green>."
+    invalid: "<red>Launch options did not produce a valid direction."
+    console-target-required: "<red>Console usage: /{label} <player> [p:power] [a:angle] [d:direction] [loc:x:y:z] [-nodamage] [-s]"
+  distance:
+    usage: "<red>Usage: /{label} <player> [player]"
+    result: "<#44CCFF>{source}<gray> to <#44CCFF>{target}<gray>: <white>{distance}<gray> blocks <dark_gray>({exact_distance}, {world})"
+    different-worlds: "<red><white>{source}<red> and <white>{target}<red> are in different worlds: <white>{source_world}<red> / <white>{target_world}<red>."
+  near:
+    empty: "<gray>No nearby players."
+    list: "<green>Nearby: <white>{players}"
+  seen:
+    usage: "<red>Usage: /{label} <player>"
+    line: "<green>Seen <white>{player}<gray>: last seen <white>{last_seen}"
+  lastonline:
+    usage: "<red>Usage: /{label} [-p:page]"
+    empty: "<gray>No stored players have been seen yet."
+    header: "<#44CCFF>Last online players <gray>page <white>{page}<gray>/<white>{pages} <dark_gray>({count} total)"
+    entry: "<gray>{index}. <white>{player}<gray> last seen <white>{last_seen}"
+  whois:
+    usage: "<red>Usage: /{label} <player>"
+    header: "<#44CCFF>Whois <white>{player}"
+    uuid: "<gray>UUID: <white>{uuid}"
+    online: "<gray>Online: <white>{online}"
+    last-seen: "<gray>Last seen: <white>{last_seen}"
+    last-location: "<gray>Last location: <white>{last_location}"
+    ip-hash: "<gray>IP hash: <white>{ip_hash}"
+  sudo:
+    usage: "<red>Usage: /{label} <player> <chat|command> <value>"
+    executed: "<green>Sudo executed for <white>{target}<green>."
+  sudoall:
+    usage: "<red>Usage: /{label} <chat|command> <value>"
+    executed: "<green>Sudo executed for <white>{count}<green> online player(s)."
+    empty: "<red>No online players are available for sudoall."
+  staffnote:
+    usage: "<red>Usage: /{label} <player> add|remove|list|clear"
+    add-usage: "<red>Usage: /{label} <player> add <note>"
+    remove-usage: "<red>Usage: /{label} <player> remove <id>"
+    added: "<green>Staff note added for <white>{target}<green>."
+    removed: "<green>Removed staff note <white>#{index}<green> for <white>{target}<green>: <gray>{note}"
+    invalid-index: "<red>No staff note exists at index <white>{index}<red>."
+    empty: "<gray>No staff notes for <white>{target}<gray>."
+    header: "<green>Staff notes for <white>{target}<green>:"
+    entry: "<gray>{index}. <white>{note}"
+    cleared: "<green>Staff notes cleared for <white>{target}<green>."
+  permission:
+    check-usage: "<red>Usage: /{label} [keyword]"
+    has-usage: "<red>Usage: /{label} <player> <permission>"
+    check-header: "<#44CCFF>Permissions matching <white>{keyword}<gray>: <white>{shown}<gray>/<white>{count}"
+    check-entry: "<gray>- <white>{permission}"
+    check-empty: "<gray>No Hydroxide permission nodes matched <white>{keyword}<gray>."
+    has-result: "<#44CCFF>{target}<gray> permission <white>{permission}<gray>: {state}"
+    state:
+      allowed: "<green>allowed"
+      denied: "<red>denied"
+  checkaccount:
+    usage: "<red>Usage: /{label} <player|ip|hash>"
+    empty: "<gray>No stored accounts matched <white>{query}<gray>."
+    header: "<#44CCFF>Accounts matching <white>{query}<gray>: <white>{count}"
+    entry: "<gray>- <white>{player} <dark_gray>({uuid}) <gray>ip-hash=<white>{ip_hash}"
+    hash-hidden: "<dark_gray>hidden"
+  sameip:
+    usage: "<red>Usage: /{label} [query]"
+    empty: "<gray>No stored account groups currently share an IP hash."
+    query-empty: "<gray>No stored same-IP accounts matched <white>{query}<gray>."
+    header: "<#44CCFF>Stored same-IP groups<gray>: <white>{count}"
+    query-header: "<#44CCFF>Same-IP accounts matching <white>{query}<gray>: <white>{count}"
+    group: "<gray>- <white>{players} <dark_gray>ip-hash=<white>{ip_hash}"
+    hash-hidden: "<dark_gray>hidden"
+  lockip:
+    usage: "<red>Usage: /{label} <player> <add|remove|list|clear> [ip|hash]"
+    remove-usage: "<red>Usage: /{label} <player> remove <ip|hash>"
+    no-known-ip: "<red>No stored IP hash exists for <white>{target}<red>. Provide an IP or 64-character hash."
+    added: "<green>IP lock added for <white>{target}<green>: <white>{ip_hash}"
+    already-added: "<gray>That IP hash is already locked for <white>{target}<gray>."
+    removed: "<green>IP lock removed for <white>{target}<green>: <white>{ip_hash}"
+    not-found: "<gray>No matching IP lock exists for <white>{target}<gray>."
+    list-empty: "<gray>No IP locks are configured for <white>{target}<gray>."
+    list-header: "<#44CCFF>IP locks for <white>{target}<gray>: <white>{count}"
+    list-entry: "<gray>- <white>{ip_hash}"
+    cleared: "<green>IP locks cleared for <white>{target}<green>."
+    denied: "<red>This account is restricted to a different IP address."
+  checkcommand:
+    usage: "<red>Usage: /{label} [keyword]"
+    empty: "<gray>No Hydroxide commands matched <white>{keyword}<gray>."
+    header: "<#44CCFF>Commands matching <white>{keyword}<gray>: <white>{shown}<gray>/<white>{count}"
+    entry: "<gray>- <white>/{command} <dark_gray>aliases=<white>{aliases} <dark_gray>perm=<white>{permission}<newline><gray>  {usage}<newline><dark_gray>  {description}"
+  alert:
+    usage: "<red>Usage: /{label} <add|list|remove> [player] [reason] [-s]"
+    default-reason: "Login alert"
+    added: "<green>Login alert added for <white>{target}<green>: <white>{reason}"
+    removed: "<green>Login alert removed for <white>{target}<green>."
+    missing: "<gray>No login alert exists for <white>{target}<gray>."
+    empty: "<gray>No login alerts are configured."
+    header: "<#44CCFF>Login alerts<gray>: <white>{count}"
+    entry: "<gray>- <white>{player} <dark_gray>({uuid}) <gray>{reason} <dark_gray>- {issuer}, {created_at}"
+    login: "<#FFB000>Login alert: <white>{player} <gray>joined. <dark_gray>{reason} - {issuer}, {created_at}"
+  oplist:
+    header: "<#44CCFF>Server operators<gray>: <white>{count}"
+    entry: "<gray>- <white>{player} <dark_gray>({state})"
+    empty: "<gray>No server operators are configured."
+    state:
+      online: "<green>online"
+      offline: "<gray>offline"
+
+vanish:
+  disabled: "<red>Vanish is disabled in config. Use <white>/vanish fix [player] <red>to repair visibility."
+  enabled: "<green>Vanish enabled for <white>{target}<green>."
+  disabled-success: "<green>Vanish disabled for <white>{target}<green>. Visibility has been reconciled."
+  status: "<#44CCFF>Vanish status for <white>{target}<gray>: {state} <dark_gray>(persist={persist}, auto-ops={auto_ops})"
+  state:
+    vanished: "<green>vanished"
+    visible: "<white>visible"
+  fix:
+    success: "<green>Visibility repair completed for <white>{target}<green>."
+  console-target-required: "<red>Console must specify a player."
+  player-offline: "<red>Player <white>{target} <red>is not online."
+
+backpacks:
+  title: "<#44CCFF>Hydroxide Vault <white>{vault}"
+  load-failed-log: "Unable to read backpack data for {player}: {reason}"
+  save-failed-log: "Unable to save backpack data for {player}: {reason}"
+
+kits:
+  menu-title: "<#44CCFF>Hydroxide Kits"
+  preview-title-prefix: "Kit Preview: "
+  preview-title: "Kit Preview: {kit}"
+  menu-item-lore: "<gray>Left click claim, right click preview."
+  set:
+    usage: "<red>Usage: /{label} <name> [cooldownSeconds]"
+    captured: "<green>Kit <white>{kit} <green>captured with cooldown <white>{cooldown}s<green>."
+  delete:
+    usage: "<red>Usage: /{label} <kit>"
+    success: "<green>Kit <white>{kit}<green> deleted."
+    missing: "<red>Kit <white>{kit}<red> does not exist."
+  show:
+    usage: "<red>Usage: /{label} <kit> [player]"
+  claim:
+    usage: "<red>Usage: /{label} [kit] [player] [-s] [-open|-preview] [-c]"
+    missing: "<red>Kit <white>{kit} <red>does not exist."
+    no-permission: "<red>You do not have permission for kit <white>{kit}<red>."
+    cooldown: "<red>Kit <white>{kit} <red>is on cooldown for <white>{remaining}s<red>."
+    claimed: "<green>Kit <white>{kit} <green>claimed."
+    given: "<green>Gave kit <white>{kit} <green>to <white>{target}<green>."
+    received: "<green>You received kit <white>{kit} <green>from <white>{player}<green>."
+    opened: "<green>Opened kit <white>{kit} <green>for <white>{target}<green>."
+    target-offline: "<red>Player <white>{target} <red>is not online."
+  cooldown-reset:
+    usage: "<red>Usage: /{label} <kit> <player|all>"
+    success: "<green>Reset kit cooldown <white>{kit} <green>for <white>{target}<green>. <dark_gray>(<white>{count}<dark_gray> entry(s))"
+
+jail:
+  restriction:
+    chat: "<red>You cannot chat while jailed."
+    command: "<red>You cannot use that command while jailed."
+  set:
+    usage: "<red>Usage: /{label} <name>"
+    success: "<green>Jail cell <white>{jail} <green>set."
+  jail:
+    usage: "<red>Usage: /{label} <player> [duration] [jail] [cellId] [-s] [r:<reason>]"
+    default-reason: "No reason provided"
+    no-cells: "<red>No jail cells are configured."
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    missing-cell: "<red>Jail cell <white>{jail} <red>does not exist."
+    success: "<green>Jailed <white>{target} <green>in <white>{jail} <green>for <white>{seconds}s<green>."
+  toggle:
+    usage: "<red>Usage: /{label} <player> [duration] [jail] [cellId] [-s] [r:<reason>]"
+    no-cells: "<red>No jail cells are configured."
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    missing-cell: "<red>Jail cell <white>{jail} <red>does not exist."
+    jailed: "<green>Jailed <white>{target} <green>in <white>{jail} <green>for <white>{seconds}s<green>."
+    released: "<green>Released <white>{target}<green> from jail."
+  unjail:
+    usage: "<red>Usage: /{label} <player> [-s]"
+    player-offline: "<red>Player <white>{target} <red>is not online."
+    success: "<green>Released <white>{target}<green>."
+  list:
+    usage: "<red>Usage: /{label} [jail] [cellId]"
+    empty: "<gray>No jail cells are configured."
+    header: "<#44CCFF>Jail cells <gray>(<white>{count}<gray>)"
+    entry: "<dark_gray>{index}. <white>{jail} <gray>- <white>{occupied}<gray> jailed"
+    prisoner: "<dark_gray>- <white>{player} <gray>for <white>{remaining}s <dark_gray>({reason})"
+    no-prisoners: "<dark_gray>- <gray>No jailed players."
+  delete:
+    usage: "<red>Usage: /{label} <name>"
+    missing-cell: "<red>Jail cell <white>{jail} <red>does not exist."
+    success: "<green>Deleted jail cell <white>{jail}<green>."
+  release:
+    notice: "<green>You have been released from jail."

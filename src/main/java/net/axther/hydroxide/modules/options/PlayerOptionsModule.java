@@ -2,15 +2,13 @@ package net.axther.hydroxide.modules.options;
 
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.YamlStore;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -24,11 +22,10 @@ import org.bukkit.inventory.meta.ItemMeta;
 import java.io.File;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
-public final class PlayerOptionsModule implements HydroModule, Listener, CommandExecutor, TabCompleter, PlayerOptionsService {
-
-    private static final String TITLE = "Hydroxide Options";
+public final class PlayerOptionsModule implements HydroModule, Listener, PlayerOptionsService {
 
     private HydroxideContext context;
     private YamlStore store;
@@ -59,7 +56,7 @@ public final class PlayerOptionsModule implements HydroModule, Listener, Command
         this.store = new YamlStore(new File(context.plugin().getDataFolder(), "options.yml"));
         context.services().playerOptionsService(this);
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("options", this);
+        context.commands().register("options", optionsCommand());
     }
 
     @Override
@@ -68,42 +65,45 @@ public final class PlayerOptionsModule implements HydroModule, Listener, Command
         context.services().clearPlayerOptionsService(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can open options.");
-            return true;
-        }
+    private CommandService optionsCommand() {
+        return new CommandService(HydroCommand.builder("options")
+                .permission("hydroxide.command.options")
+                .playerOnly(true)
+                .usage("/{label} [option] [on|off]")
+                .executor(ctx -> options((Player) ctx.sender(), ctx.arguments().toArray(String[]::new)))
+                .completer(ctx -> {
+                    if (ctx.arguments().size() == 1) {
+                        return CommandUtils.matching(ctx.argument(0), java.util.Arrays.stream(PlayerOption.values()).map(PlayerOption::key).toList());
+                    }
+                    if (ctx.arguments().size() == 2) {
+                        return CommandUtils.matching(ctx.argument(1), List.of("off", "on"));
+                    }
+                    return List.of();
+                })
+                .build(), context.messages());
+    }
+
+    private void options(Player player, String[] args) {
         if (args.length >= 2) {
             PlayerOption option = PlayerOption.fromKey(args[0]);
             if (option == null) {
-                context.send(player, "<red>Unknown option.");
-                return true;
+                context.message(player, "options.unknown", Map.of());
+                return;
             }
             boolean enabled = args[1].equalsIgnoreCase("on") || args[1].equalsIgnoreCase("true");
             set(player.getUniqueId(), option, enabled);
-            context.send(player, "<green>Option <white>" + option.key() + " <green>set to <white>" + enabled + "<green>.");
-            return true;
+            context.message(player, "options.updated", Map.of(
+                    "option", option.key(),
+                    "state", enabled
+            ));
+            return;
         }
         player.openInventory(menu(player));
-        return true;
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return CommandUtils.matching(args[0], java.util.Arrays.stream(PlayerOption.values()).map(PlayerOption::key).toList());
-        }
-        if (args.length == 2) {
-            return CommandUtils.matching(args[1], List.of("off", "on"));
-        }
-        return List.of();
     }
 
     @EventHandler
     public void onClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player) || !context.text().plain(event.getView().title()).equals(TITLE)) {
+        if (!(event.getWhoClicked() instanceof Player player) || !context.text().plain(event.getView().title()).equals(menuTitle())) {
             return;
         }
         event.setCancelled(true);
@@ -134,16 +134,20 @@ public final class PlayerOptionsModule implements HydroModule, Listener, Command
     }
 
     private Inventory menu(Player player) {
-        Inventory inventory = Bukkit.createInventory(null, 27, Component.text(TITLE));
+        Inventory inventory = Bukkit.createInventory(null, 27, context.messages().component("options.title", Map.of()));
         for (PlayerOption option : PlayerOption.values()) {
             boolean enabled = enabled(player.getUniqueId(), option);
             ItemStack item = new ItemStack(enabled ? Material.LIME_DYE : Material.GRAY_DYE);
             ItemMeta meta = item.getItemMeta();
             meta.displayName(Component.text(option.key().replace("-", " ")));
-            meta.lore(List.of(context.text().format(enabled ? "<green>Enabled" : "<red>Disabled")));
+            meta.lore(List.of(context.messages().component(enabled ? "options.state.enabled" : "options.state.disabled", Map.of())));
             item.setItemMeta(meta);
             inventory.addItem(item);
         }
         return inventory;
+    }
+
+    private String menuTitle() {
+        return context.text().plain(context.messages().component("options.title", Map.of()));
     }
 }

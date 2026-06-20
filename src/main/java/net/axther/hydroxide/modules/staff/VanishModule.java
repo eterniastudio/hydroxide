@@ -3,16 +3,16 @@ package net.axther.hydroxide.modules.staff;
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
 import net.axther.hydroxide.commands.CompletionUtils;
+import net.axther.hydroxide.commands.framework.CommandContext;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.modules.welcome.PlayerVisualStateOwner;
 import net.axther.hydroxide.modules.welcome.PlayerVisualStateType;
 import net.axther.hydroxide.storage.YamlStore;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -26,11 +26,11 @@ import org.bukkit.potion.PotionEffectType;
 import java.io.File;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public final class VanishModule implements HydroModule, Listener, CommandExecutor, TabCompleter, VanishService {
+public final class VanishModule implements HydroModule, Listener, VanishService {
 
     private static final List<String> SUBCOMMANDS = List.of("fix", "status");
 
@@ -66,7 +66,7 @@ public final class VanishModule implements HydroModule, Listener, CommandExecuto
         this.vanishStore = new YamlStore(new File(context.plugin().getDataFolder(), "data/vanish.yml"));
         this.settings = VanishSettings.from(context.plugin().getConfig());
         this.state = loadState();
-        context.commands().register("vanish", this);
+        context.commands().register("vanish", vanishCommand());
         context.services().vanishService(this);
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
         if (!settings.enabled()) {
@@ -97,46 +97,51 @@ public final class VanishModule implements HydroModule, Listener, CommandExecuto
         }
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.vanish")) {
-            return true;
-        }
+    private CommandService vanishCommand() {
+        return new CommandService(HydroCommand.builder("vanish")
+                .permission("hydroxide.command.vanish")
+                .usage("/{label} [player|status [player]|fix [player]]")
+                .executor(ctx -> vanish(ctx.sender(), ctx.arguments().toArray(String[]::new)))
+                .completer(this::vanishCompletions)
+                .build(), context.messages());
+    }
+
+    private void vanish(CommandSender sender, String[] args) {
         if (args.length > 0 && args[0].equalsIgnoreCase("status")) {
-            return status(sender, args);
+            status(sender, args);
+            return;
         }
         if (args.length > 0 && args[0].equalsIgnoreCase("fix")) {
-            return fix(sender, args);
+            fix(sender, args);
+            return;
         }
         if (settings != null && !settings.enabled()) {
-            context.send(sender, "<red>Vanish is disabled in config. Use <white>/vanish fix [player] <red>to repair visibility.");
-            return true;
+            context.message(sender, "vanish.disabled", Map.of());
+            return;
         }
 
         Player target = resolveTarget(sender, args.length == 0 ? null : args[0]);
         if (target == null) {
-            return true;
+            return;
         }
         VanishChange change = state.toggleManual(target.getUniqueId());
         save();
         applyChange(target, change);
         if (change.vanishedNow()) {
-            context.send(sender, "<green>Vanish enabled for <white>" + target.getName() + "<green>.");
+            context.message(sender, "vanish.enabled", Map.of("target", target.getName()));
         } else {
-            context.send(sender, "<green>Vanish disabled for <white>" + target.getName() + "<green>. Visibility has been reconciled.");
+            context.message(sender, "vanish.disabled-success", Map.of("target", target.getName()));
         }
-        return true;
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
+    private List<String> vanishCompletions(CommandContext ctx) {
+        if (ctx.arguments().size() == 1) {
             java.util.ArrayList<String> suggestions = new java.util.ArrayList<>(SUBCOMMANDS);
             suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
-            return CommandUtils.matching(args[0], suggestions);
+            return CommandUtils.matching(ctx.argument(0), suggestions);
         }
-        if (args.length == 2 && (args[0].equalsIgnoreCase("status") || args[0].equalsIgnoreCase("fix"))) {
-            return CompletionUtils.onlinePlayers(args[1]);
+        if (ctx.arguments().size() == 2 && (ctx.argument(0).equalsIgnoreCase("status") || ctx.argument(0).equalsIgnoreCase("fix"))) {
+            return CompletionUtils.onlinePlayers(ctx.argument(1));
         }
         return List.of();
     }
@@ -210,28 +215,28 @@ public final class VanishModule implements HydroModule, Listener, CommandExecuto
         }
     }
 
-    private boolean status(CommandSender sender, String[] args) {
+    private void status(CommandSender sender, String[] args) {
         Player target = resolveTarget(sender, args.length > 1 ? args[1] : null);
         if (target == null) {
-            return true;
+            return;
         }
         boolean vanished = isVanished(target.getUniqueId());
-        context.send(sender, "<#44CCFF>Vanish status for <white>" + target.getName() + "<gray>: "
-                + (vanished ? "<green>vanished" : "<white>visible")
-                + " <dark_gray>(persist=" + (settings != null && settings.persist())
-                + ", auto-ops=" + (settings != null && settings.autoVanishOps()) + ")");
-        return true;
+        context.message(sender, "vanish.status", Map.of(
+                "target", target.getName(),
+                "state", context.messages().template(vanished ? "vanish.state.vanished" : "vanish.state.visible", vanished ? "vanished" : "visible"),
+                "persist", settings != null && settings.persist(),
+                "auto_ops", settings != null && settings.autoVanishOps()
+        ));
     }
 
-    private boolean fix(CommandSender sender, String[] args) {
+    private void fix(CommandSender sender, String[] args) {
         Player target = resolveTarget(sender, args.length > 1 ? args[1] : null);
         if (target == null) {
-            return true;
+            return;
         }
         VanishChange change = state.fix(target.getUniqueId());
         applyChange(target, change);
-        context.send(sender, "<green>Visibility repair completed for <white>" + target.getName() + "<green>.");
-        return true;
+        context.message(sender, "vanish.fix.success", Map.of("target", target.getName()));
     }
 
     private void applyChange(Player target, VanishChange change) {
@@ -305,13 +310,13 @@ public final class VanishModule implements HydroModule, Listener, CommandExecuto
         if (name == null || name.isBlank()) {
             Player self = CommandUtils.playerSender(sender).orElse(null);
             if (self == null) {
-                context.send(sender, "<red>Console must specify a player.");
+                context.message(sender, "vanish.console-target-required", Map.of());
             }
             return self;
         }
         Player target = CommandUtils.onlinePlayer(name).orElse(null);
         if (target == null) {
-            context.send(sender, "<red>That player is not online.");
+            context.message(sender, "vanish.player-offline", Map.of("target", name));
         }
         return target;
     }

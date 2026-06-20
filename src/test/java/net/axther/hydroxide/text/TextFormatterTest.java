@@ -49,6 +49,13 @@ class TextFormatterTest {
     }
 
     @Test
+    void escapesMiniMessageAndLegacySyntaxForLiteralPreview() {
+        Component component = formatter.format(formatter.literal("<red>&aLiteral"));
+
+        assertEquals("<red>&aLiteral", formatter.plain(component));
+    }
+
+    @Test
     void blankInputFormatsAsEmptyComponent() {
         assertEquals("", formatter.plain(formatter.format(null)));
         assertEquals("", formatter.plain(formatter.format("")));

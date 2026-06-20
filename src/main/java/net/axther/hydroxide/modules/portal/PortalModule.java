@@ -4,6 +4,8 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.StoredLocation;
 import net.axther.hydroxide.storage.YamlStore;
@@ -11,10 +13,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Particle;
 import org.bukkit.World;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -27,9 +25,10 @@ import org.bukkit.scheduler.BukkitTask;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-public final class PortalModule implements HydroModule, Listener, CommandExecutor, TabCompleter {
+public final class PortalModule implements HydroModule, Listener {
 
     private HydroxideContext context;
     private YamlStore portalStore;
@@ -61,7 +60,7 @@ public final class PortalModule implements HydroModule, Listener, CommandExecuto
         this.portalStore = new YamlStore(new File(context.plugin().getDataFolder(), "portals.yml"));
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
         Bukkit.getMessenger().registerOutgoingPluginChannel(context.plugin(), "BungeeCord");
-        context.commands().register("portal", this);
+        context.commands().register("portal", portalCommand());
         particleTask = Bukkit.getScheduler().runTaskTimer(context.plugin(), this::drawParticles, 40L, 40L);
     }
 
@@ -73,31 +72,49 @@ public final class PortalModule implements HydroModule, Listener, CommandExecuto
         }
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.portal")) {
-            return true;
-        }
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can create portals.");
-            return true;
-        }
+    private CommandService portalCommand() {
+        return new CommandService(HydroCommand.builder("portal")
+                .permission("hydroxide.command.portal")
+                .playerOnly(true)
+                .usage("/{label} <create|delete> <name> [destination] [radius]")
+                .executor(ctx -> portal((Player) ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(ctx -> {
+                    if (ctx.arguments().size() == 1) {
+                        return CommandUtils.matching(ctx.argument(0), List.of("create", "delete"));
+                    }
+                    if (ctx.arguments().size() == 2) {
+                        return CommandUtils.matching(ctx.argument(1), portalNames());
+                    }
+                    if (ctx.arguments().size() == 3 && ctx.argument(0).equalsIgnoreCase("create")) {
+                        List<String> destinations = new ArrayList<>(context.warps().names());
+                        destinations.add("server:");
+                        destinations.add("velocity:0,1,0");
+                        return CommandUtils.matching(ctx.argument(2), destinations);
+                    }
+                    if (ctx.arguments().size() == 4 && ctx.argument(0).equalsIgnoreCase("create")) {
+                        return CommandUtils.matching(ctx.argument(3), List.of("1", "1.5", "2", "3", "5"));
+                    }
+                    return List.of();
+                })
+                .build(), context.messages());
+    }
+
+    private void portal(Player player, String label, String[] args) {
         if (args.length < 2) {
-            context.send(sender, "<red>Usage: /" + label + " <create|delete> <name> [destination] [radius]");
-            return true;
+            context.message(player, "portal.usage", Map.of("label", label));
+            return;
         }
         YamlConfiguration yaml = portalStore.load();
         String path = "portals." + args[1].toLowerCase(java.util.Locale.ROOT);
         if (args[0].equalsIgnoreCase("delete")) {
             yaml.set(path, null);
             portalStore.save(yaml);
-            context.send(sender, "<green>Portal deleted.");
-            return true;
+            context.message(player, "portal.deleted", Map.of("portal", args[1]));
+            return;
         }
         if (!args[0].equalsIgnoreCase("create") || args.length < 3) {
-            context.send(sender, "<red>Usage: /" + label + " create <name> <warp|server:name|velocity:x,y,z> [radius]");
-            return true;
+            context.message(player, "portal.create-usage", Map.of("label", label));
+            return;
         }
         double radius = args.length >= 4 ? parseDouble(args[3], 1.5D) : 1.5D;
         Location location = player.getLocation();
@@ -110,28 +127,7 @@ public final class PortalModule implements HydroModule, Listener, CommandExecuto
         yaml.set(path + ".max.z", location.getZ() + radius);
         yaml.set(path + ".destination", args[2]);
         portalStore.save(yaml);
-        context.send(sender, "<green>Portal created.");
-        return true;
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return CommandUtils.matching(args[0], List.of("create", "delete"));
-        }
-        if (args.length == 2) {
-            return CommandUtils.matching(args[1], portalNames());
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("create")) {
-            List<String> destinations = new ArrayList<>(context.warps().names());
-            destinations.add("server:");
-            destinations.add("velocity:0,1,0");
-            return CommandUtils.matching(args[2], destinations);
-        }
-        if (args.length == 4 && args[0].equalsIgnoreCase("create")) {
-            return CommandUtils.matching(args[3], List.of("1", "1.5", "2", "3", "5"));
-        }
-        return List.of();
+        context.message(player, "portal.created", Map.of("portal", args[1]));
     }
 
     @EventHandler

@@ -4,6 +4,7 @@ import com.destroystokyo.paper.profile.PlayerProfile;
 import net.axther.hydroxide.storage.PlayerDataStore;
 import net.axther.hydroxide.text.TextFormatter;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.scoreboard.Scoreboard;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -34,6 +36,7 @@ public final class NicknameService {
     private final Map<UUID, String> realNames = new HashMap<>();
     private final Map<String, UUID> lookupByNickname = new HashMap<>();
     private final Map<UUID, PlayerProfile> originalProfiles = new HashMap<>();
+    private final Map<UUID, NameplateState> nameplates = new HashMap<>();
 
     public NicknameService(TextFormatter formatter) {
         this.formatter = formatter;
@@ -74,6 +77,18 @@ public final class NicknameService {
         return rawNickname(playerId).map(raw -> formatter.plain(formatter.format(raw)));
     }
 
+    public void cacheNameplate(UUID playerId, NameplateState state) {
+        if (state.empty()) {
+            nameplates.remove(playerId);
+        } else {
+            nameplates.put(playerId, state);
+        }
+    }
+
+    public Optional<NameplateState> nameplate(UUID playerId) {
+        return Optional.ofNullable(nameplates.get(playerId));
+    }
+
     public String legacyFormattedNickname(UUID playerId, String fallbackName) {
         return rawNickname(playerId)
                 .map(raw -> net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer.legacySection()
@@ -101,7 +116,17 @@ public final class NicknameService {
         player.playerListName(nickname);
         player.customName(nickname);
         player.setCustomNameVisible(true);
-        applyTeamPrefix(player, nickname);
+        refreshTeam(player);
+    }
+
+    public void applyNameplate(Player player, NameplateState state) {
+        cacheNameplate(player.getUniqueId(), state);
+        refreshTeam(player);
+    }
+
+    public void resetNameplate(Player player) {
+        nameplates.remove(player.getUniqueId());
+        refreshTeam(player);
     }
 
     public void reset(Player player) {
@@ -115,17 +140,20 @@ public final class NicknameService {
         player.playerListName(realName);
         player.customName(null);
         player.setCustomNameVisible(false);
-        unregisterTeam(player.getUniqueId());
+        refreshTeam(player);
     }
 
     public void shutdown() {
-        for (UUID playerId : rawNicknames.keySet()) {
+        Set<UUID> playerIds = new java.util.HashSet<>(rawNicknames.keySet());
+        playerIds.addAll(nameplates.keySet());
+        for (UUID playerId : playerIds) {
             unregisterTeam(playerId);
         }
         rawNicknames.clear();
         realNames.clear();
         lookupByNickname.clear();
         originalProfiles.clear();
+        nameplates.clear();
     }
 
     public static boolean requiresColorPermission(String nickname) {
@@ -204,26 +232,77 @@ public final class NicknameService {
         }
     }
 
-    private void applyTeamPrefix(Player player, Component nickname) {
+    public record NameplateState(String prefix, String suffix, NamedTextColor colorValue) {
+        public NameplateState {
+            prefix = prefix == null ? "" : prefix;
+            suffix = suffix == null ? "" : suffix;
+        }
+
+        public Optional<NamedTextColor> color() {
+            return Optional.ofNullable(colorValue);
+        }
+
+        public boolean empty() {
+            return prefix.isBlank() && suffix.isBlank() && colorValue == null;
+        }
+
+        public NameplateState withPrefix(String value) {
+            return new NameplateState(value, suffix, colorValue);
+        }
+
+        public NameplateState withSuffix(String value) {
+            return new NameplateState(prefix, value, colorValue);
+        }
+
+        public NameplateState withColor(NamedTextColor value) {
+            return new NameplateState(prefix, suffix, value);
+        }
+
+        public NameplateState withoutColor() {
+            return new NameplateState(prefix, suffix, null);
+        }
+
+        public static NameplateState emptyState() {
+            return new NameplateState("", "", null);
+        }
+    }
+
+    private void refreshTeam(Player player) {
         ScoreboardManager scoreboardManager = Bukkit.getScoreboardManager();
         if (scoreboardManager == null) {
             return;
         }
-        applyTeamPrefix(scoreboardManager.getMainScoreboard(), player, nickname);
+        refreshTeam(scoreboardManager.getMainScoreboard(), player);
         for (Player viewer : Bukkit.getOnlinePlayers()) {
-            applyTeamPrefix(viewer.getScoreboard(), player, nickname);
+            refreshTeam(viewer.getScoreboard(), player);
         }
     }
 
-    private void applyTeamPrefix(Scoreboard scoreboard, Player player, Component nickname) {
+    private void refreshTeam(Scoreboard scoreboard, Player player) {
+        UUID playerId = player.getUniqueId();
+        NameplateState nameplate = nameplates.get(playerId);
+        Optional<String> rawNickname = rawNickname(playerId);
+        if ((nameplate == null || nameplate.empty()) && rawNickname.isEmpty()) {
+            unregisterTeam(scoreboard, playerId);
+            return;
+        }
+
         Team team = scoreboard.getTeam(teamName(player.getUniqueId()));
         if (team == null) {
             team = scoreboard.registerNewTeam(teamName(player.getUniqueId()));
         }
-        team.prefix(nickname.append(Component.space()));
-        team.suffix(Component.empty());
+        team.prefix(teamPrefix(nameplate, rawNickname));
+        team.suffix(nameplate == null ? Component.empty() : formatter.format(nameplate.suffix()));
+        team.color(nameplate == null ? NamedTextColor.WHITE : nameplate.color().orElse(NamedTextColor.WHITE));
         team.addEntry(player.getName());
         team.addEntry(sanitizeProfileName(rawNicknames.getOrDefault(player.getUniqueId(), player.getName())));
+    }
+
+    private Component teamPrefix(NameplateState nameplate, Optional<String> rawNickname) {
+        Component prefix = nameplate == null ? Component.empty() : formatter.format(nameplate.prefix());
+        return rawNickname
+                .map(raw -> prefix.append(formatter.format(raw)).append(Component.space()))
+                .orElse(prefix);
     }
 
     private void unregisterTeam(UUID playerId) {

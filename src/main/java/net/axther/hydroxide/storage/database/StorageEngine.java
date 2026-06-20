@@ -126,6 +126,20 @@ public final class StorageEngine {
         });
     }
 
+    public CompletableFuture<Map<UUID, Double>> balances() {
+        return database.supplyAsync(() -> {
+            Map<UUID, Double> balances = new HashMap<>();
+            try (Connection connection = database.getConnection();
+                 PreparedStatement statement = connection.prepareStatement("SELECT uuid, balance FROM hydroxide_players");
+                 ResultSet result = statement.executeQuery()) {
+                while (result.next()) {
+                    balances.put(UUID.fromString(result.getString("uuid")), result.getDouble("balance"));
+                }
+            }
+            return Map.copyOf(balances);
+        });
+    }
+
     public CompletableFuture<Void> saveHome(UUID uuid, String name, StoredLocation location) {
         return database.runAsync(() -> {
             try (Connection connection = database.getConnection();

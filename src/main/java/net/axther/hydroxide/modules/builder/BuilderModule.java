@@ -3,6 +3,9 @@ package net.axther.hydroxide.modules.builder;
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
 import net.axther.hydroxide.commands.CompletionUtils;
+import net.axther.hydroxide.commands.framework.CommandContext;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.YamlStore;
 import net.kyori.adventure.text.Component;
@@ -11,10 +14,7 @@ import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
@@ -36,6 +36,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.entity.ArmorStand;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.ItemFrame;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
@@ -55,13 +56,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-public final class BuilderModule implements HydroModule, Listener, CommandExecutor, TabCompleter, BuilderService {
+public final class BuilderModule implements HydroModule, Listener, BuilderService {
 
-    private static final List<String> COMMANDS = List.of(
-            "build", "buildstatus", "breaktoggle", "placetoggle", "pickblock",
-            "wand", "pos1", "pos2", "sel", "setblockarea", "replacearea", "walls", "hollow",
-            "copyarea", "pastearea", "undo", "redo", "brush", "fillnear", "drainnear", "fixlight"
-    );
     private static final List<String> SEL_ACTIONS = List.of("clear", "contract", "expand", "info");
     private static final List<String> BRUSH_ACTIONS = List.of("cylinder", "none", "replace", "smooth", "sphere");
 
@@ -101,9 +97,50 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         seedDefaults();
         context.services().builderService(this);
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        for (String command : COMMANDS) {
-            context.commands().register(command, this);
-        }
+        context.commands().register("build", command("build", "hydroxide.builder.mode", "/{label} [player] [on|off|toggle]", false,
+                ctx -> build(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("buildstatus", command("buildstatus", "hydroxide.builder.mode", "/{label} [player]", false,
+                ctx -> buildStatus(ctx.sender(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("breaktoggle", command("breaktoggle", "hydroxide.builder.mode", "/{label}",
+                ctx -> toggleOwn(ctx.sender(), Toggle.BREAK)));
+        context.commands().register("placetoggle", command("placetoggle", "hydroxide.builder.mode", "/{label}",
+                ctx -> toggleOwn(ctx.sender(), Toggle.PLACE)));
+        context.commands().register("pickblock", command("pickblock", "hydroxide.builder.pickblock", "/{label}",
+                ctx -> pickBlock(ctx.sender())));
+        context.commands().register("blockcycling", command("blockcycling", "hydroxide.builder.blockcycling", "/{label} [forward|backward]",
+                ctx -> blockCycling(ctx.sender(), ctx.label(), ctx.arguments())));
+        context.commands().register("wand", command("wand", "hydroxide.builder.wand", "/{label}",
+                ctx -> wand(ctx.sender())));
+        context.commands().register("pos1", command("pos1", "hydroxide.builder.selection", "/{label}",
+                ctx -> setPosition(ctx.sender(), true)));
+        context.commands().register("pos2", command("pos2", "hydroxide.builder.selection", "/{label}",
+                ctx -> setPosition(ctx.sender(), false)));
+        context.commands().register("sel", command("sel", "hydroxide.builder.selection", "/{label} <clear|expand|contract|info>",
+                ctx -> selectionCommand(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("setblockarea", command("setblockarea", "hydroxide.builder.edit", "/{label} <block>",
+                ctx -> setArea(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("replacearea", command("replacearea", "hydroxide.builder.edit", "/{label} <from> <to>",
+                ctx -> replaceArea(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("walls", command("walls", "hydroxide.builder.edit", "/{label} <block>",
+                ctx -> walls(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("hollow", command("hollow", "hydroxide.builder.edit", "/{label} <block>",
+                ctx -> hollow(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("copyarea", command("copyarea", "hydroxide.builder.copy", "/{label}",
+                ctx -> copyArea(ctx.sender())));
+        context.commands().register("pastearea", command("pastearea", "hydroxide.builder.paste", "/{label}",
+                ctx -> pasteArea(ctx.sender())));
+        context.commands().register("undo", command("undo", "hydroxide.builder.undo", "/{label} [steps]",
+                ctx -> history(ctx.sender(), ctx.arguments().toArray(String[]::new), true)));
+        context.commands().register("redo", command("redo", "hydroxide.builder.redo", "/{label} [steps]",
+                ctx -> history(ctx.sender(), ctx.arguments().toArray(String[]::new), false)));
+        context.commands().register("brush", command("brush", "hydroxide.builder.brush", "/{label} <sphere|cylinder|replace|smooth|none> ...",
+                ctx -> brush(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("fillnear", command("fillnear", "hydroxide.builder.brush", "/{label} <block> <radius>",
+                ctx -> fillNear(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("drainnear", command("drainnear", "hydroxide.builder.brush", "/{label} [radius]",
+                ctx -> drainNear(ctx.sender(), ctx.arguments().toArray(String[]::new))));
+        context.commands().register("fixlight", command("fixlight", "hydroxide.builder.brush", "/{label} [radius]",
+                ctx -> fixLight(ctx.sender(), ctx.arguments().toArray(String[]::new))));
     }
 
     @Override
@@ -113,38 +150,22 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         context.services().clearBuilderService(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        String name = command.getName().toLowerCase(Locale.ROOT);
-        return switch (name) {
-            case "build" -> build(sender, label, args);
-            case "buildstatus" -> buildStatus(sender, args);
-            case "breaktoggle" -> toggleOwn(sender, Toggle.BREAK);
-            case "placetoggle" -> toggleOwn(sender, Toggle.PLACE);
-            case "pickblock" -> pickBlock(sender);
-            case "wand" -> wand(sender);
-            case "pos1" -> setPosition(sender, true);
-            case "pos2" -> setPosition(sender, false);
-            case "sel" -> selectionCommand(sender, label, args);
-            case "setblockarea" -> setArea(sender, label, args);
-            case "replacearea" -> replaceArea(sender, label, args);
-            case "walls" -> walls(sender, label, args);
-            case "hollow" -> hollow(sender, label, args);
-            case "copyarea" -> copyArea(sender);
-            case "pastearea" -> pasteArea(sender);
-            case "undo" -> history(sender, args, true);
-            case "redo" -> history(sender, args, false);
-            case "brush" -> brush(sender, label, args);
-            case "fillnear" -> fillNear(sender, label, args);
-            case "drainnear" -> drainNear(sender, args);
-            case "fixlight" -> fixLight(sender, args);
-            default -> true;
-        };
+    private CommandService command(String name, String permission, String usage, HydroCommand.HydroCommandExecutor executor) {
+        return command(name, permission, usage, true, executor);
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        String name = command.getName().toLowerCase(Locale.ROOT);
+    private CommandService command(String name, String permission, String usage, boolean playerOnly, HydroCommand.HydroCommandExecutor executor) {
+        return new CommandService(HydroCommand.builder(name)
+                .permission(permission)
+                .playerOnly(playerOnly)
+                .usage(usage)
+                .executor(executor)
+                .completer(ctx -> completions(name, ctx))
+                .build(), context.messages());
+    }
+
+    private List<String> completions(String name, CommandContext ctx) {
+        String[] args = ctx.arguments().toArray(String[]::new);
         if (name.equals("build")) {
             if (args.length == 1) {
                 List<String> values = new ArrayList<>(List.of("off", "on", "toggle"));
@@ -163,6 +184,9 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         }
         if (name.equals("buildstatus") && args.length == 1) {
             return CompletionUtils.onlinePlayers(args[0]);
+        }
+        if (name.equals("blockcycling") && args.length == 1) {
+            return CommandUtils.matching(args[0], List.of("forward", "backward", "next", "prev"));
         }
         if (name.equals("sel") && args.length == 1) {
             return CommandUtils.matching(args[0], SEL_ACTIONS);
@@ -207,7 +231,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         BuilderProfile profile = profile(event.getPlayer().getUniqueId());
         if (requiresBuildMode(event.getBlock().getWorld()) && !profile.buildMode()) {
             event.setCancelled(true);
-            context.send(event.getPlayer(), "<red>Build mode is required in this world.");
+            context.message(event.getPlayer(), "builder.protection.build-mode-required", Map.of());
             return;
         }
         if (shouldCancelForToggle(event.getPlayer(), Toggle.BREAK)) {
@@ -220,7 +244,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         BuilderProfile profile = profile(event.getPlayer().getUniqueId());
         if (requiresBuildMode(event.getBlock().getWorld()) && !profile.buildMode()) {
             event.setCancelled(true);
-            context.send(event.getPlayer(), "<red>Build mode is required in this world.");
+            context.message(event.getPlayer(), "builder.protection.build-mode-required", Map.of());
             return;
         }
         if (shouldCancelForToggle(event.getPlayer(), Toggle.PLACE)) {
@@ -334,14 +358,14 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
             mode = args[0];
         } else {
             if (!sender.hasPermission("hydroxide.builder.mode.others")) {
-                context.send(sender, "<red>You cannot change build mode for others.");
+                context.message(sender, "builder.mode.others-denied", Map.of());
                 return true;
             }
             target = CommandUtils.onlinePlayer(args[0]).orElse(null);
             mode = args.length > 1 ? args[1] : "toggle";
         }
         if (target == null) {
-            context.send(sender, "<red>Usage: /" + label + " [player] [on|off|toggle]");
+            context.message(sender, "builder.mode.usage", Map.of("label", label));
             return true;
         }
         BuilderProfile profile = profile(target.getUniqueId());
@@ -352,15 +376,15 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         };
         profile.buildMode(enabled);
         saveProfile(target.getUniqueId());
-        action(target, enabled ? "<green>Build mode enabled." : "<red>Build mode disabled.");
-        context.send(sender, "<green>Build mode for <white>" + target.getName() + " <green>is <white>" + (enabled ? "on" : "off") + "<green>.");
+        action(target, enabled ? "builder.mode.enabled-action" : "builder.mode.disabled-action", Map.of());
+        context.message(sender, "builder.mode.updated", Map.of("target", target.getName(), "state", state(enabled)));
         return true;
     }
 
     private boolean buildStatus(CommandSender sender, String[] args) {
         Player target = args.length == 0 ? requirePlayer(sender) : CommandUtils.onlinePlayer(args[0]).orElse(null);
         if (target == null) {
-            context.send(sender, "<red>That player is not online.");
+            context.message(sender, "builder.mode.player-offline", Map.of("target", args.length == 0 ? "" : args[0]));
             return true;
         }
         BuilderProfile profile = profile(target.getUniqueId());
@@ -368,9 +392,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
                 .map(key -> key + "=" + profile.enabled(Toggle.fromKey(key).orElseThrow()))
                 .reduce((left, right) -> left + ", " + right)
                 .orElse("");
-        context.send(sender, "<#44CCFF>Build status for <white>" + target.getName()
-                + "<gray>: mode=<white>" + profile.buildMode()
-                + "<gray>, toggles=<white>" + toggles);
+        context.message(sender, "builder.mode.status", Map.of("target", target.getName(), "mode", profile.buildMode(), "toggles", toggles));
         return true;
     }
 
@@ -383,7 +405,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         boolean enabled = !profile.enabled(toggle);
         profile.set(toggle, enabled);
         saveProfile(player.getUniqueId());
-        action(player, "<#44CCFF>" + toggle.display() + " toggle: <white>" + (enabled ? "on" : "off"));
+        action(player, "builder.toggle.updated-action", Map.of("toggle", toggle.display(), "state", state(enabled)));
         return true;
     }
 
@@ -394,14 +416,14 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         }
         Toggle toggle = Toggle.fromKey(args[1]).orElse(null);
         if (toggle == null) {
-            context.send(player, "<red>Usage: /" + label + " toggle <" + String.join("|", Toggle.keys()) + "> [on|off]");
+            context.message(player, "builder.toggle.usage", Map.of("label", label, "toggles", String.join("|", Toggle.keys())));
             return true;
         }
         BuilderProfile profile = profile(player.getUniqueId());
         boolean enabled = args.length >= 3 ? args[2].equalsIgnoreCase("on") : !profile.enabled(toggle);
         profile.set(toggle, enabled);
         saveProfile(player.getUniqueId());
-        action(player, "<#44CCFF>" + toggle.display() + " toggle: <white>" + (enabled ? "on" : "off"));
+        action(player, "builder.toggle.updated-action", Map.of("toggle", toggle.display(), "state", state(enabled)));
         return true;
     }
 
@@ -412,11 +434,40 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         }
         Block block = player.getTargetBlockExact(100);
         if (block == null) {
-            context.send(player, "<red>Look at a block first.");
+            context.message(player, "builder.target-block-required", Map.of());
             return true;
         }
         player.getInventory().addItem(new ItemStack(block.getType()));
-        context.send(player, "<green>Picked <white>" + block.getType().key().asString() + "<green>.");
+        context.message(player, "builder.pickblock.picked", Map.of("block", block.getType().key().asString()));
+        return true;
+    }
+
+    private boolean blockCycling(CommandSender sender, String label, List<String> args) {
+        Player player = requirePlayer(sender);
+        if (player == null || !context.requirePermission(sender, "hydroxide.builder.blockcycling")) {
+            return true;
+        }
+        Optional<BlockCyclingCommandParser.Request> request = BlockCyclingCommandParser.parse(args);
+        if (request.isEmpty()) {
+            context.message(player, "builder.blockcycling.usage", Map.of("label", label));
+            return true;
+        }
+        Block block = player.getTargetBlockExact(100);
+        if (block == null) {
+            context.message(player, "builder.target-block-required", Map.of());
+            return true;
+        }
+        Optional<BlockData> cycled = BlockDataCycler.cycle(block.getBlockData(), request.orElseThrow().direction());
+        if (cycled.isEmpty()) {
+            context.message(player, "builder.blockcycling.unsupported", Map.of("block", block.getType().key().asString()));
+            return true;
+        }
+        BlockData next = cycled.orElseThrow();
+        block.setBlockData(next, true);
+        context.message(player, "builder.blockcycling.changed", Map.of(
+                "block", block.getType().key().asString(),
+                "state", next.getAsString()
+        ));
         return true;
     }
 
@@ -427,11 +478,11 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         }
         ItemStack wand = new ItemStack(Material.BLAZE_ROD);
         ItemMeta meta = wand.getItemMeta();
-        meta.displayName(context.text().format("<#44CCFF>Hydroxide Builder Wand"));
+        meta.displayName(context.messages().component("builder.wand.name", Map.of()));
         meta.getPersistentDataContainer().set(key("wand"), PersistentDataType.BOOLEAN, true);
         wand.setItemMeta(meta);
         player.getInventory().addItem(wand);
-        context.send(player, "<green>Builder wand added.");
+        context.message(player, "builder.wand.added", Map.of());
         return true;
     }
 
@@ -451,28 +502,32 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
             return true;
         }
         if (args.length == 0) {
-            context.send(player, "<red>Usage: /" + label + " clear|expand|contract|info");
+            context.message(player, "builder.selection.usage", Map.of("label", label));
             return true;
         }
         SelectionState state = selections.get(player.getUniqueId());
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "clear" -> {
                 selections.remove(player.getUniqueId());
-                context.send(player, "<green>Selection cleared.");
+                context.message(player, "builder.selection.cleared", Map.of());
             }
-            case "info" -> context.send(player, state == null || state.selection().isEmpty()
-                    ? "<red>No complete selection."
-                    : "<green>Selection volume: <white>" + state.selection().get().volume());
+            case "info" -> {
+                if (state == null || state.selection().isEmpty()) {
+                    context.message(player, "builder.selection.incomplete", Map.of());
+                } else {
+                    context.message(player, "builder.selection.volume", Map.of("volume", state.selection().get().volume()));
+                }
+            }
             case "expand", "contract" -> {
                 if (state == null || state.selection().isEmpty()) {
-                    context.send(player, "<red>No complete selection.");
+                    context.message(player, "builder.selection.incomplete", Map.of());
                     return true;
                 }
                 int amount = args[0].equalsIgnoreCase("expand") ? 1 : -1;
                 selections.put(player.getUniqueId(), state.expand(amount));
-                context.send(player, "<green>Selection updated.");
+                context.message(player, "builder.selection.updated", Map.of());
             }
-            default -> context.send(player, "<red>Usage: /" + label + " clear|expand|contract|info");
+            default -> context.message(player, "builder.selection.usage", Map.of("label", label));
         }
         return true;
     }
@@ -480,12 +535,12 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
     private boolean setArea(CommandSender sender, String label, String[] args) {
         Player player = requirePlayer(sender);
         if (player == null || args.length < 1) {
-            context.send(sender, "<red>Usage: /" + label + " <block>");
+            context.message(sender, "builder.edit.usage-block", Map.of("label", label));
             return true;
         }
         Material material = BuilderMaterialResolver.resolveBlock(args[0]).orElse(null);
         if (material == null) {
-            context.send(player, "<red>Unknown block.");
+            context.message(player, "builder.edit.unknown-block", Map.of("block", args[0]));
             return true;
         }
         return selectionPlan(player, selection -> plan(selection, (world, x, y, z) -> material, false));
@@ -494,13 +549,13 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
     private boolean replaceArea(CommandSender sender, String label, String[] args) {
         Player player = requirePlayer(sender);
         if (player == null || args.length < 2) {
-            context.send(sender, "<red>Usage: /" + label + " <from> <to>");
+            context.message(sender, "builder.edit.usage-replace", Map.of("label", label));
             return true;
         }
         Material from = BuilderMaterialResolver.resolveBlock(args[0]).orElse(null);
         Material to = BuilderMaterialResolver.resolveBlock(args[1]).orElse(null);
         if (from == null || to == null) {
-            context.send(player, "<red>Unknown block.");
+            context.message(player, "builder.edit.unknown-block", Map.of("block", from == null ? args[0] : args[1]));
             return true;
         }
         return selectionPlan(player, selection -> plan(selection, (world, x, y, z) -> world.getBlockAt(x, y, z).getType() == from ? to : null, false));
@@ -509,12 +564,12 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
     private boolean walls(CommandSender sender, String label, String[] args) {
         Player player = requirePlayer(sender);
         if (player == null || args.length < 1) {
-            context.send(sender, "<red>Usage: /" + label + " <block>");
+            context.message(sender, "builder.edit.usage-block", Map.of("label", label));
             return true;
         }
         Material material = BuilderMaterialResolver.resolveBlock(args[0]).orElse(null);
         if (material == null) {
-            context.send(player, "<red>Unknown block.");
+            context.message(player, "builder.edit.unknown-block", Map.of("block", args[0]));
             return true;
         }
         return selectionPlan(player, selection -> plan(selection, (world, x, y, z) -> isWall(selection, x, z) ? material : null, false));
@@ -523,12 +578,12 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
     private boolean hollow(CommandSender sender, String label, String[] args) {
         Player player = requirePlayer(sender);
         if (player == null || args.length < 1) {
-            context.send(sender, "<red>Usage: /" + label + " <block>");
+            context.message(sender, "builder.edit.usage-block", Map.of("label", label));
             return true;
         }
         Material material = BuilderMaterialResolver.resolveBlock(args[0]).orElse(null);
         if (material == null) {
-            context.send(player, "<red>Unknown block.");
+            context.message(player, "builder.edit.unknown-block", Map.of("block", args[0]));
             return true;
         }
         return selectionPlan(player, selection -> plan(selection, (world, x, y, z) -> isShell(selection, x, y, z) ? material : Material.AIR, false));
@@ -545,14 +600,14 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         }
         World world = Bukkit.getWorld(selection.worldName());
         if (world == null) {
-            context.send(player, "<red>Selection world is not loaded.");
+            context.message(player, "builder.edit.world-unloaded", Map.of("world", selection.worldName()));
             return true;
         }
         BlockVector3i min = selection.min();
         List<ClipboardBlock> blocks = new ArrayList<>();
         iterate(selection, (x, y, z) -> blocks.add(new ClipboardBlock(x - min.x(), y - min.y(), z - min.z(), world.getBlockAt(x, y, z).getType())));
         clipboards.put(player.getUniqueId(), new Clipboard(blocks));
-        context.send(player, "<green>Copied <white>" + blocks.size() + " <green>blocks.");
+        context.message(player, "builder.clipboard.copied", Map.of("blocks", blocks.size()));
         return true;
     }
 
@@ -563,7 +618,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         }
         Clipboard clipboard = clipboards.get(player.getUniqueId());
         if (clipboard == null) {
-            context.send(player, "<red>Your clipboard is empty.");
+            context.message(player, "builder.clipboard.empty", Map.of());
             return true;
         }
         Block origin = player.getLocation().getBlock();
@@ -586,7 +641,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         for (int i = 0; i < Math.max(1, steps); i++) {
             Optional<BlockEditPlan> plan = undo ? history.undo(Instant.now()) : history.redo(Instant.now());
             if (plan.isEmpty()) {
-                context.send(player, undo ? "<red>Nothing to undo." : "<red>Nothing to redo.");
+                context.message(player, undo ? "builder.history.undo-empty" : "builder.history.redo-empty", Map.of());
                 return true;
             }
             execute(player, player.getWorld(), undo ? plan.get().inverse() : plan.get(), false);
@@ -600,17 +655,17 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
             return true;
         }
         if (args.length == 0) {
-            context.send(player, "<red>Usage: /" + label + " sphere|cylinder|replace|smooth|none ...");
+            context.message(player, "builder.brush.usage", Map.of("label", label));
             return true;
         }
         if (args[0].equalsIgnoreCase("none")) {
             setBrush(player, null);
-            context.send(player, "<green>Brush cleared.");
+            context.message(player, "builder.brush.cleared", Map.of());
             return true;
         }
         BrushBinding binding = BrushBinding.parse(args).orElse(null);
         if (binding == null) {
-            context.send(player, "<red>Invalid brush arguments.");
+            context.message(player, "builder.brush.invalid", Map.of());
             return true;
         }
         BrushLimits limits = brushLimits(player);
@@ -618,20 +673,20 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
             binding = binding.withRadius(limits.maxRadius());
         }
         setBrush(player, binding);
-        context.send(player, "<green>Brush bound to held item.");
+        context.message(player, "builder.brush.bound", Map.of());
         return true;
     }
 
     private boolean fillNear(CommandSender sender, String label, String[] args) {
         Player player = requirePlayer(sender);
         if (player == null || args.length < 2) {
-            context.send(sender, "<red>Usage: /" + label + " <block> <radius>");
+            context.message(sender, "builder.near.fill-usage", Map.of("label", label));
             return true;
         }
         Material material = BuilderMaterialResolver.resolveBlock(args[0]).orElse(null);
         int radius = brushLimits(player).clampRadius(parseInt(args[1], 3));
         if (material == null) {
-            context.send(player, "<red>Unknown block.");
+            context.message(player, "builder.edit.unknown-block", Map.of("block", args[0]));
             return true;
         }
         Block center = player.getLocation().getBlock();
@@ -658,7 +713,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         }
         int radius = brushLimits(player).clampRadius(args.length > 0 ? parseInt(args[0], 3) : 3);
         int chunks = Math.max(1, ((radius * 2) / 16) + 1);
-        context.send(player, "<green>Queued nearby light/chunk refresh hint for <white>" + chunks + "x" + chunks + " <green>chunks.");
+        context.message(player, "builder.near.fixlight-queued", Map.of("chunks", chunks, "radius", radius));
         return true;
     }
 
@@ -668,12 +723,12 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
             return true;
         }
         if (!selection.withinLimit(blockLimit(player))) {
-            context.send(player, "<red>Selection is too large. Limit: <white>" + blockLimit(player));
+            context.message(player, "builder.edit.selection-too-large", Map.of("limit", blockLimit(player)));
             return true;
         }
         World world = Bukkit.getWorld(selection.worldName());
         if (world == null) {
-            context.send(player, "<red>Selection world is not loaded.");
+            context.message(player, "builder.edit.world-unloaded", Map.of("world", selection.worldName()));
             return true;
         }
         execute(player, world, planner.apply(selection), true);
@@ -721,15 +776,15 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
 
     private void execute(Player player, World world, BlockEditPlan plan, boolean recordUndo) {
         if (plan.changes().isEmpty()) {
-            context.send(player, "<gray>No blocks changed.");
+            context.message(player, "builder.edit.no-changes", Map.of());
             return;
         }
         if (plan.changes().size() > blockLimit(player)) {
-            context.send(player, "<red>Edit exceeds your block limit of <white>" + blockLimit(player));
+            context.message(player, "builder.edit.limit-exceeded", Map.of("limit", blockLimit(player), "blocks", plan.changes().size()));
             return;
         }
         if (activeEdits.contains(player.getUniqueId())) {
-            context.send(player, "<red>You already have an edit running.");
+            context.message(player, "builder.edit.already-running", Map.of());
             return;
         }
         activeEdits.add(player.getUniqueId());
@@ -739,7 +794,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
             if (recordUndo) {
                 history(player.getUniqueId()).record(plan, Instant.now());
             }
-            action(player, "<green>Edit complete: <white>" + plan.changes().size() + " <green>blocks.");
+            action(player, "builder.edit.complete-action", Map.of("blocks", plan.changes().size()));
         });
     }
 
@@ -751,7 +806,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         for (BlockChange change : batches.get(index)) {
             world.getBlockAt(change.position().x(), change.position().y(), change.position().z()).setType(change.after(), false);
         }
-        action(player, "<#44CCFF>Edit progress <white>" + (index + 1) + "/" + batches.size());
+        action(player, "builder.edit.progress-action", Map.of("current", index + 1, "total", batches.size()));
         BukkitTask ignored = Bukkit.getScheduler().runTaskLater(context.plugin(), () -> runBatch(player, world, batches, index + 1, done), 1L);
     }
 
@@ -759,13 +814,13 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         long now = System.currentTimeMillis();
         long readyAt = brushCooldowns.getOrDefault(player.getUniqueId(), 0L);
         if (readyAt > now) {
-            action(player, "<red>Brush is cooling down.");
+            action(player, "builder.brush.cooldown-action", Map.of());
             return;
         }
         brushCooldowns.put(player.getUniqueId(), now + store.load().getLong("brush.cooldown-ms", 500L));
         BrushLimits limits = brushLimits(player);
         if (!limits.withinBlockLimit((int) Math.min(Integer.MAX_VALUE, Math.round((4.0D / 3.0D) * Math.PI * Math.pow(binding.radius(), 3))))) {
-            context.send(player, "<red>Brush exceeds your block limit.");
+            context.message(player, "builder.brush.limit-exceeded", Map.of("limit", blockLimit(player)));
             return;
         }
         BlockEditPlan plan = switch (binding.type()) {
@@ -847,13 +902,13 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
                 ? new SelectionState(block.getWorld().getName(), vector(block), state.second())
                 : new SelectionState(block.getWorld().getName(), state.first(), vector(block));
         selections.put(player.getUniqueId(), updated);
-        action(player, first ? "<green>Position 1 set." : "<green>Position 2 set.");
+        action(player, first ? "builder.selection.pos1-action" : "builder.selection.pos2-action", Map.of());
     }
 
     private CuboidSelection requireSelection(Player player) {
         SelectionState state = selections.get(player.getUniqueId());
         if (state == null || state.selection().isEmpty()) {
-            context.send(player, "<red>Select both positions first.");
+            context.message(player, "builder.selection.required", Map.of());
             return null;
         }
         return state.selection().get();
@@ -926,7 +981,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
     private void setBrush(Player player, BrushBinding binding) {
         ItemStack item = player.getInventory().getItemInMainHand();
         if (item.getType() == Material.AIR) {
-            context.send(player, "<red>Hold an item first.");
+            context.message(player, "builder.brush.hold-required", Map.of());
             return;
         }
         ItemMeta meta = item.getItemMeta();
@@ -958,7 +1013,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
     private Player requirePlayer(CommandSender sender) {
         Player player = CommandUtils.playerSender(sender).orElse(null);
         if (player == null) {
-            context.send(sender, "<red>Only players can use builder tools.");
+            context.message(sender, "validation.player-only", Map.of("usage", ""));
         }
         return player;
     }
@@ -991,8 +1046,12 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         return isWall(selection, x, z) || y == min.y() || y == max.y();
     }
 
-    private void action(Player player, String message) {
-        player.sendActionBar(context.text().format(message));
+    private String state(boolean enabled) {
+        return enabled ? "on" : "off";
+    }
+
+    private void action(Player player, String key, Map<String, ?> placeholders) {
+        player.sendActionBar(context.messages().component(key, placeholders));
     }
 
     private boolean shouldCancelForToggle(Player player, Toggle toggle) {
@@ -1000,7 +1059,7 @@ public final class BuilderModule implements HydroModule, Listener, CommandExecut
         if (!profile.buildMode() || profile.enabled(toggle)) {
             return false;
         }
-        action(player, "<red>" + toggle.display() + " toggle is off.");
+        action(player, "builder.toggle.disabled-action", Map.of("toggle", toggle.display()));
         return true;
     }
 

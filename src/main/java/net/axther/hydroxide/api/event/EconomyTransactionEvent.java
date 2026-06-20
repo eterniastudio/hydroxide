@@ -98,6 +98,8 @@ public final class EconomyTransactionEvent extends Event implements Cancellable 
         ADMIN_TAKE,
         ADMIN_SET,
         SHOP_BUY,
-        SHOP_SELL
+        SHOP_SELL,
+        CHEQUE_CREATE,
+        CHEQUE_REDEEM
     }
 }

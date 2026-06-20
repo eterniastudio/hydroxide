@@ -1,5 +1,5 @@
 name: Hydroxide
-version: '1.0.0'
+version: '@version@'
 main: net.axther.hydroxide.Hydroxide
 api-version: '1.21'
 authors: [ Axther ]
@@ -10,13 +10,127 @@ commands:
   hydroxide:
     aliases: [ hx, hydrox ]
     description: Hydroxide administration.
-    usage: /hydroxide [help|modules|reload]
+    usage: /hydroxide [help|modules|reload|messages reload|cooldown]
     permission: hydroxide.command.hydroxide
+  editlocale:
+    aliases: [ localeedit ]
+    description: Search and edit Hydroxide message keys, then reload messages.yml.
+    usage: /editlocale [keyword|reload|set <key> <value>]
+    permission: hydroxide.command.editlocale
+  help:
+    aliases: [ ehelp, hhelp, hydrohelp ]
+    description: Show permission-aware Hydroxide command help.
+    usage: /help [page|query]
+    permission: hydroxide.command.help
   broadcast:
     aliases: [ bc ]
     description: Broadcast a formatted server message.
-    usage: /broadcast <message>
+    usage: /broadcast [!] <message> [-w:world,world] [-r:radius] [-c:world;x;y;z]
     permission: hydroxide.command.broadcast
+  actionbarmsg:
+    aliases: [ actionbar, actionbroadcast, abroadcast ]
+    description: Send a formatted action bar message to one player or all players.
+    usage: /actionbarmsg <player|all> [-s:seconds] <message>
+    permission: hydroxide.command.actionbarmsg
+  bossbarmsg:
+    aliases: [ bossbroadcast, bbroadcast ]
+    description: Send a temporary formatted boss bar message to one player or all players.
+    usage: /bossbarmsg <player|all> [-sec:seconds] <message>
+    permission: hydroxide.command.bossbarmsg
+  titlemsg:
+    aliases: [ titlebroadcast, tbroadcast ]
+    description: Send a formatted title message to one player or all players.
+    usage: /titlemsg <player|all> [-in:ticks] [-keep:ticks] [-out:ticks] <title> [\n subtitle]
+    permission: hydroxide.command.titlemsg
+  ctellraw:
+    aliases: [ tellrawmsg ]
+    description: Send a formatted raw chat component to one player or all players.
+    usage: /ctellraw <player|all> <message>
+    permission: hydroxide.command.ctellraw
+  me:
+    aliases: [ action ]
+    description: Broadcast an emote action.
+    usage: /me <action>
+    permission: hydroxide.command.me
+  clearchat:
+    aliases: [ cc ]
+    description: Clear chat for online players.
+    usage: /clearchat [self] [-s]
+    permission: hydroxide.command.clearchat
+  motd:
+    aliases: [ messageoftheday ]
+    description: Show the configured message of the day.
+    usage: /motd
+    permission: hydroxide.command.motd
+  info:
+    description: Show the configured server information page.
+    usage: /info
+    permission: hydroxide.command.info
+  rules:
+    description: Show the configured server rules.
+    usage: /rules
+    permission: hydroxide.command.rules
+  ctext:
+    aliases: [ customtext ]
+    description: Show a configured CMI-style custom text page to yourself, one player, or all players.
+    usage: /ctext <cText> [player|all] [sourcePlayer]
+    permission: hydroxide.command.ctext
+  editctext:
+    aliases: [ ctextedit ]
+    description: Create, inspect, enable, disable, or delete CMI-style custom text pages.
+    usage: /editctext <list|show|set|delete|enable|disable|reload> [name] [line1 | line2]
+    permission: hydroxide.command.editctext
+  helpop:
+    aliases: [ ac ]
+    description: Send a help request to online staff.
+    usage: /helpop <message>
+    permission: hydroxide.command.helpop
+  maintenance:
+    aliases: [ maint ]
+    description: Toggle CMI-style maintenance mode.
+    usage: /maintenance [true|false|status] [message]
+    permission: hydroxide.command.maintenance
+  usermeta:
+    aliases: [ usermetadata, playermeta ]
+    description: Manage CMI-style custom per-player metadata.
+    usage: /usermeta <player> <add|remove|clear|list|increment> [key] [value] [-s]
+    permission: hydroxide.command.usermeta
+  list:
+    aliases: [ who, online, players ]
+    description: Show visible online players.
+    usage: /list
+    permission: hydroxide.command.list
+  ping:
+    description: Show your ping or another player's ping.
+    usage: /ping [player]
+    permission: hydroxide.command.ping
+  gc:
+    aliases: [ lag, mem, memory ]
+    description: Show live server memory and world statistics.
+    usage: /gc
+    permission: hydroxide.command.gc
+  tps:
+    description: Show live server TPS and MSPT statistics.
+    usage: /tps [-spikes]
+    permission: hydroxide.command.tps
+  servertime:
+    aliases: [ serverclock ]
+    description: Show the server's local and UTC time.
+    usage: /servertime
+    permission: hydroxide.command.servertime
+  setmotd:
+    description: Set the server-list MOTD lines.
+    usage: /setmotd <newMotd> [-s]
+    permission: hydroxide.command.setmotd
+  status:
+    aliases: [ serverstatus ]
+    description: Show live server status.
+    usage: /status
+    permission: hydroxide.command.status
+  maxplayers:
+    description: View or change the runtime maximum player count.
+    usage: /maxplayers [amount]
+    permission: hydroxide.command.maxplayers
   message:
     aliases: [ msg, tell, whisper, w ]
     description: Send a private message.
@@ -27,6 +141,59 @@ commands:
     description: Reply to your last private message.
     usage: /reply <message>
     permission: hydroxide.command.reply
+  chat:
+    aliases: [ pmchat ]
+    description: Focus normal chat into persistent private messages to one player.
+    usage: /chat [player|off]
+    permission: hydroxide.command.chat
+  msgtoggle:
+    aliases: [ pmtoggle, messagetoggle ]
+    description: Toggle whether you accept private messages.
+    usage: /msgtoggle [on|off]
+    permission: hydroxide.command.msgtoggle
+  ignore:
+    aliases: [ unignore ]
+    description: Toggle private-message ignores.
+    usage: /ignore [player|list|clear]
+    permission: hydroxide.command.ignore
+  socialspy:
+    aliases: [ msgspy ]
+    description: Toggle private-message social spy for staff.
+    usage: /socialspy [player] [on|off]
+    permission: hydroxide.command.socialspy
+  commandspy:
+    aliases: [ cmdspy ]
+    description: Toggle player command spy for staff.
+    usage: /commandspy [player] [on|off]
+    permission: hydroxide.command.commandspy
+  chatcolor:
+    aliases: [ chatcolour ]
+    description: Set your persistent chat message color.
+    usage: /chatcolor [player] <hex|color|clear>
+    permission: hydroxide.command.chatcolor
+  colors:
+    aliases: [ colours ]
+    description: Show supported legacy, hex, and MiniMessage color codes.
+    usage: /colors
+    permission: hydroxide.command.colors
+  colorpicker:
+    aliases: [ colourpicker, cpick ]
+    description: Resolve a color name or hex value into Hydroxide color formats.
+    usage: /colorpicker <hex|color>
+    permission: hydroxide.command.colorpicker
+  colorlimits:
+    aliases: [ colourlimits ]
+    description: Show color-related permissions for yourself or an online player.
+    usage: /colorlimits [player]
+    permission: hydroxide.command.colorlimits
+  afk:
+    description: Toggle AFK status for yourself or another player.
+    usage: /afk [player] [on|off]
+    permission: hydroxide.command.afk
+  afkcheck:
+    description: Check whether you, a player, or all online players are AFK.
+    usage: /afkcheck [player|all]
+    permission: hydroxide.command.afkcheck
   spawn:
     description: Teleport to spawn.
     usage: /spawn
@@ -73,10 +240,43 @@ commands:
     description: Return to your previous teleport location.
     usage: /back
     permission: hydroxide.command.back
+  dback:
+    aliases: [ deathback ]
+    description: Return to your last death location, or send another online player to theirs.
+    usage: /dback [player] [-s]
+    permission: hydroxide.command.dback
+  resetback:
+    description: Clear a stored back location for yourself or an online player.
+    usage: /resetback [player] [-s]
+    permission: hydroxide.command.resetback
   tpa:
     description: Request to teleport to another player.
     usage: /tpa <player>
     permission: hydroxide.command.tpa
+  tpahere:
+    aliases: [ tpaskhere ]
+    description: Request another player to teleport to you.
+    usage: /tpahere <player>
+    permission: hydroxide.command.tpahere
+  tpaall:
+    description: Ask all online players to teleport to you.
+    usage: /tpaall
+    permission: hydroxide.command.tpaall
+  tpacancel:
+    aliases: [ tpcancel ]
+    description: Cancel your outgoing teleport request.
+    usage: /tpacancel
+    permission: hydroxide.command.tpacancel
+  tptoggle:
+    aliases: [ tpatoggle ]
+    description: Toggle whether you receive teleport requests.
+    usage: /tptoggle [on|off]
+    permission: hydroxide.command.tptoggle
+  tpauto:
+    aliases: [ tpautoaccept ]
+    description: Toggle automatic acceptance of teleport requests.
+    usage: /tpauto [on|off]
+    permission: hydroxide.command.tpauto
   tpaccept:
     description: Accept a teleport request.
     usage: /tpaccept
@@ -85,31 +285,259 @@ commands:
     description: Deny a teleport request.
     usage: /tpdeny
     permission: hydroxide.command.tpdeny
+  tp:
+    description: Teleport yourself or another player to an online player.
+    usage: /tp <player> [target]
+    permission: hydroxide.command.tp
+  tphere:
+    aliases: [ s ]
+    description: Teleport an online player to you.
+    usage: /tphere <player>
+    permission: hydroxide.command.tphere
+  tpo:
+    description: Force teleport yourself or another player to an online player.
+    usage: /tpo <player> [target]
+    permission: hydroxide.command.tpo
+  tpohere:
+    description: Force teleport an online player to you.
+    usage: /tpohere <player>
+    permission: hydroxide.command.tpohere
+  tpall:
+    description: Teleport all online players to you or a target player.
+    usage: /tpall [target]
+    permission: hydroxide.command.tpall
+  tpallworld:
+    description: Teleport all online players from one world to a target location.
+    usage: /tpallworld <world> [world;x;y;z[;yaw;pitch]] [-a]
+    permission: hydroxide.command.tpallworld
+  tppos:
+    description: Teleport to coordinates with support for relative ~ syntax.
+    usage: /tppos [-p:player] <x> <y> <z> [world] [pitch] [yaw]
+    permission: hydroxide.command.tppos
+  tpopos:
+    description: Force teleport to coordinates with support for relative ~ syntax.
+    usage: /tpopos [-p:player] <x> <y> <z> [world] [pitch] [yaw]
+    permission: hydroxide.command.tpopos
+  jump:
+    aliases: [ j ]
+    description: Teleport to the block you are looking at.
+    usage: /jump
+    permission: hydroxide.command.jump
+  down:
+    aliases: [ descend ]
+    description: Teleport one floor down, or to the lowest safe floor with max.
+    usage: /down [player] [max] [-s]
+    permission: hydroxide.command.down
+  world:
+    description: Teleport to another world at your current position.
+    usage: /world <normal|nether|end|world> [player] [-s]
+    permission: hydroxide.command.world
+  patrol:
+    description: Teleport to online players without repeating targets until each has been visited.
+    usage: /patrol [reset]
+    permission: hydroxide.command.patrol
   fly:
     description: Toggle flight.
     usage: /fly [player]
     permission: hydroxide.command.fly
+  tfly:
+    description: Temporarily enable flight for an online player.
+    usage: /tfly <player> [timeInSec|+seconds|0] [-s]
+    permission: hydroxide.command.tfly
   god:
     description: Toggle god mode.
     usage: /god [player]
     permission: hydroxide.command.god
+  tgod:
+    description: Temporarily enable god mode for an online player.
+    usage: /tgod <player> [timeInSec|+seconds|0] [-s]
+    permission: hydroxide.command.tgod
   heal:
     description: Heal a player.
-    usage: /heal [player]
+    usage: /heal [player|all] [amount|percent]
     permission: hydroxide.command.heal
   feed:
     description: Feed a player.
-    usage: /feed [player]
+    usage: /feed [player|all] [-s]
     permission: hydroxide.command.feed
+  hunger:
+    description: Set food level for one player or all online players.
+    usage: /hunger <player|all> <0-20>
+    permission: hydroxide.command.hunger
+  saturation:
+    description: Set saturation level for one player or all online players.
+    usage: /saturation <player|all> <0-20>
+    permission: hydroxide.command.saturation
+  maxhp:
+    aliases: [ maxhealth ]
+    description: Set, add, take, or clear a player's maximum health.
+    usage: /maxhp <set|add|take|clear> [player] [amount]
+    permission: hydroxide.command.maxhp
+  scale:
+    description: Set, add, take, or clear a player's entity scale.
+    usage: /scale <set|add|take|clear> [player] [amount] [-s]
+    permission: hydroxide.command.scale
+  glow:
+    description: Toggle glowing or set a colored glow for an online player.
+    usage: /glow [player] [on|off|toggle|color]
+    permission: hydroxide.command.glow
+  notarget:
+    aliases: [ nomobtarget ]
+    description: Toggle whether mobs can target you or another online player.
+    usage: /notarget [player] [true|false|toggle]
+    permission: hydroxide.command.notarget
+  playercollision:
+    aliases: [ collision ]
+    description: Toggle whether an online player collides with other entities.
+    usage: /playercollision [player] [true|false|toggle] [-s]
+    permission: hydroxide.command.playercollision
+  cuff:
+    aliases: [ handcuff ]
+    description: Suspend or restore an online player's actions.
+    usage: /cuff <player> [true|false|toggle] [-s]
+    permission: hydroxide.command.cuff
   speed:
+    aliases: [ flyspeed, walkspeed ]
     description: Set walk or fly speed.
     usage: /speed <1-10> [walk|fly] [player]
     permission: hydroxide.command.speed
   gamemode:
-    aliases: [ gm ]
+    aliases: [ gm, gmc, gms, gma, gmsp ]
     description: Set gamemode.
     usage: /gamemode <mode> [player]
     permission: hydroxide.command.gamemode
+  effect:
+    aliases: [ potion, potioneffect ]
+    description: Apply or clear potion effects for one player or all online players.
+    usage: /effect <player|all> <effect|clear> [seconds] [amplifier] [-visual]
+    permission: hydroxide.command.effect
+  air:
+    description: Set remaining air ticks for one player or all online players.
+    usage: /air <player|all> <ticks|max>
+    permission: hydroxide.command.air
+  falldistance:
+    aliases: [ falldist ]
+    description: Set fall distance for one player or all online players.
+    usage: /falldistance <player|all> <distance>
+    permission: hydroxide.command.falldistance
+  kick:
+    description: Kick one online player or all online players with an optional reason.
+    usage: /kick <player|all> [reason] [-s]
+    permission: hydroxide.command.kick
+  kickall:
+    description: Kick all online players with an optional reason.
+    usage: /kickall [reason] [-s]
+    permission: hydroxide.command.kick
+  ban:
+    description: Ban a player profile with an optional reason.
+    usage: /ban <player> [reason]
+    permission: hydroxide.command.ban
+  banlist:
+    description: List active player bans.
+    usage: /banlist [page]
+    permission: hydroxide.command.banlist
+  checkban:
+    aliases: [ baninfo ]
+    description: Check whether a player profile is banned.
+    usage: /checkban <player>
+    permission: hydroxide.command.checkban
+  tempban:
+    description: Temporarily ban a player profile.
+    usage: /tempban <player> <duration> [reason]
+    permission: hydroxide.command.tempban
+  unban:
+    aliases: [ pardon ]
+    description: Remove a player profile ban.
+    usage: /unban <player>
+    permission: hydroxide.command.unban
+  ipban:
+    aliases: [ banip, ban-ip ]
+    description: Ban an IP address or the current IP of an online player.
+    usage: /ipban <ip|player> [reason] [-s]
+    permission: hydroxide.command.ipban
+  ipbanlist:
+    description: List active IP bans.
+    usage: /ipbanlist [page]
+    permission: hydroxide.command.ipbanlist
+  unbanip:
+    aliases: [ pardonip, pardon-ip ]
+    description: Remove an IP ban.
+    usage: /unbanip <ip>
+    permission: hydroxide.command.unbanip
+  mute:
+    aliases: [ silence ]
+    description: Mute a player until manually unmuted.
+    usage: /mute <player> [reason]
+    permission: hydroxide.command.mute
+  mutechat:
+    aliases: [ globalmute, chatmute ]
+    description: Temporarily prevent public chat messages.
+    usage: /mutechat [time|status|off] [-s] [reason]
+    permission: hydroxide.command.mutechat
+  tempmute:
+    description: Temporarily mute a player.
+    usage: /tempmute <player> <duration> [reason]
+    permission: hydroxide.command.tempmute
+  unmute:
+    description: Remove a player mute.
+    usage: /unmute <player>
+    permission: hydroxide.command.unmute
+  warn:
+    description: Record a warning for a player.
+    usage: /warn <player> <reason>
+    permission: hydroxide.command.warn
+  warnings:
+    aliases: [ warns ]
+    description: Show stored warnings for a player.
+    usage: /warnings <player>
+    permission: hydroxide.command.warnings
+  clearwarnings:
+    aliases: [ clearwarns ]
+    description: Clear stored warnings for a player.
+    usage: /clearwarnings <player>
+    permission: hydroxide.command.clearwarnings
+  editwarnings:
+    description: CMI-style warning editor for clearing one player or all warnings.
+    usage: /editwarnings <player|clearall> [clear]
+    permission: hydroxide.command.editwarnings
+  time:
+    description: Set world time.
+    usage: /time <day|noon|night|midnight|ticks> [world]
+    permission: hydroxide.command.time
+  day:
+    description: Set world time to day.
+    usage: /day [world]
+    permission: hydroxide.command.time
+  night:
+    description: Set world time to night.
+    usage: /night [world]
+    permission: hydroxide.command.time
+  weather:
+    description: Set world weather.
+    usage: /weather <sun|storm|thunder> [durationSeconds] [world]
+    permission: hydroxide.command.weather
+  sun:
+    description: Clear world weather.
+    usage: /sun [durationSeconds] [world]
+    permission: hydroxide.command.weather
+  storm:
+    description: Start rain in a world.
+    usage: /storm [durationSeconds] [world]
+    permission: hydroxide.command.weather
+  thunder:
+    description: Start thunder in a world.
+    usage: /thunder [durationSeconds] [world]
+    permission: hydroxide.command.weather
+  ptime:
+    aliases: [ playertime ]
+    description: Set or reset personal client-side time.
+    usage: /ptime <reset|day|noon|night|midnight|ticks> [player]
+    permission: hydroxide.command.ptime
+  pweather:
+    aliases: [ playerweather ]
+    description: Set or reset personal client-side weather.
+    usage: /pweather <reset|sun|storm|thunder> [player]
+    permission: hydroxide.command.pweather
   nickname:
     aliases: [ nick ]
     description: Set or clear a formatted nickname.
@@ -119,15 +547,34 @@ commands:
     description: Resolve an active nickname to a real username.
     usage: /realname <nickname>
     permission: hydroxide.command.realname
+  nameplate:
+    description: Set a player's above-head nameplate prefix, suffix, or color.
+    usage: /nameplate [player] [-pref:<text>] [-suf:<text>] [-c:<color|reset>] [reset] [-s]
+    permission: hydroxide.command.nameplate
   balance:
     aliases: [ bal, money ]
     description: Check your balance or another player's balance.
     usage: /balance [player]
     permission: hydroxide.command.balance
+  baltop:
+    aliases: [ balancetop, moneytop ]
+    description: Show the richest known players.
+    usage: /baltop [page]
+    permission: hydroxide.command.baltop
   pay:
     description: Send money to another player.
     usage: /pay <player> <amount>
     permission: hydroxide.command.pay
+  paytoggle:
+    aliases: [ ptoggle ]
+    description: Toggle whether other players can pay you.
+    usage: /paytoggle [on|off]
+    permission: hydroxide.command.paytoggle
+  cheque:
+    aliases: [ check ]
+    description: Convert money into a signed physical cheque item.
+    usage: /cheque [player] <amount>
+    permission: hydroxide.command.cheque
   eco:
     description: Administer Hydroxide economy balances.
     usage: /eco <give|take|set> <player> <amount>
@@ -152,15 +599,30 @@ commands:
     permission: hydroxide.command.setjail
   jail:
     description: Jail a player for a duration.
-    usage: /jail <player> <jail> <duration> [reason]
+    usage: /jail <player> [duration] [jail] [cellId] [-s] [r:<reason>]
     permission: hydroxide.command.jail
+  togglejail:
+    aliases: [ etogglejail ]
+    description: Jail an unjailed player or release an already jailed player.
+    usage: /togglejail <player> [duration] [jail] [cellId] [-s] [r:<reason>]
+    permission: hydroxide.command.togglejail
   unjail:
     description: Release a jailed player.
-    usage: /unjail <player>
+    usage: /unjail <player> [-s]
     permission: hydroxide.command.unjail
+  jails:
+    aliases: [ jaillist ]
+    description: List configured jail cells and jailed players.
+    usage: /jails [jail] [cellId]
+    permission: hydroxide.command.jails
+  deljail:
+    aliases: [ rmjail, remjail ]
+    description: Delete a configured jail cell.
+    usage: /deljail <name>
+    permission: hydroxide.command.deljail
   kit:
-    description: Claim or preview a kit.
-    usage: /kit <name>
+    description: Claim, preview, open, or give a kit to another online player.
+    usage: /kit [kit] [player] [-s] [-open|-preview] [-c]
     permission: hydroxide.command.kit
   kits:
     description: Open the kit menu.
@@ -170,10 +632,51 @@ commands:
     description: Create a kit from your inventory.
     usage: /setkit <name> [cooldown]
     permission: hydroxide.command.setkit
+  createkit:
+    description: Essentials-style alias to create a kit from your inventory.
+    usage: /createkit <name> [cooldown]
+    permission: hydroxide.command.createkit
+  delkit:
+    aliases: [ deletekit ]
+    description: Delete a kit and its stored cooldown entries.
+    usage: /delkit <kit>
+    permission: hydroxide.command.delkit
+  showkit:
+    description: Preview a kit's contents.
+    usage: /showkit <kit> [player]
+    permission: hydroxide.command.showkit
+  kitcdreset:
+    aliases: [ kitcooldownreset ]
+    description: Reset kit cooldowns for one player or all stored cooldowns.
+    usage: /kitcdreset <kit> <player|all>
+    permission: hydroxide.command.kitcdreset
   shop:
     description: Open the Hydroxide shop menu.
     usage: /shop
     permission: hydroxide.command.shop
+  sell:
+    aliases: [ sellall ]
+    description: Sell held, matching, or all configured shop items.
+    usage: /sell [hand|all|material] [amount]
+    permission: hydroxide.command.sell
+  worth:
+    aliases: [ price ]
+    description: Show the configured sell value for a held or named item.
+    usage: /worth [hand|material] [amount]
+    permission: hydroxide.command.worth
+  setworth:
+    aliases: [ setprice ]
+    description: Set the configured sell value for a held or named item.
+    usage: /setworth [material] <price>
+    permission: hydroxide.command.setworth
+  generateworth:
+    description: Auto-generate CMI-style sell worth values for item materials.
+    usage: /generateworth [basePrice] [-overwrite]
+    permission: hydroxide.command.generateworth
+  worthlist:
+    description: List configured or missing CMI-style item worth values.
+    usage: /worthlist [player] [-missing] [-p:page]
+    permission: hydroxide.command.worthlist
   portal:
     description: Manage coordinate portals.
     usage: /portal <create|delete> <name> ...
@@ -221,10 +724,37 @@ commands:
     description: Show the top players for a statistic.
     usage: /top [stat]
     permission: hydroxide.command.top
+  playtime:
+    description: Show your own or another player's recorded playtime.
+    usage: /playtime [player]
+    permission: hydroxide.command.playtime
+  cplaytime:
+    aliases: [ playtimegui ]
+    description: Open a detailed playtime and statistics GUI.
+    usage: /cplaytime [player]
+    permission: hydroxide.command.cplaytime
+  editplaytime:
+    description: CMI-style playtime editor for admins.
+    usage: /editplaytime [player] <add|take|set> <amount> [-s]
+    permission: hydroxide.command.editplaytime
+  playtimetop:
+    aliases: [ ptop ]
+    description: Show the top recorded playtime leaderboard.
+    usage: /playtimetop [page]
+    permission: hydroxide.command.playtimetop
   server:
-    description: Connect to another proxy server.
-    usage: /server <name>
+    description: Connect yourself or another online player to a proxy server.
+    usage: /server <server> [player] [-f]
     permission: hydroxide.command.server
+  serverlist:
+    aliases: [ servers ]
+    description: Show configured proxy servers.
+    usage: /serverlist [filter]
+    permission: hydroxide.command.serverlist
+  sendall:
+    description: Send all online players to another proxy server.
+    usage: /sendall <server>
+    permission: hydroxide.command.sendall
   networkalert:
     aliases: [ galert ]
     description: Broadcast an alert across the proxy network.
@@ -247,6 +777,11 @@ commands:
     description: Send a one-off staff chat message.
     usage: /sc <message>
     permission: hydroxide.channel.staff
+  staffmsg:
+    aliases: [ staffchat, schat ]
+    description: Send a one-off CMI-style staff chat message.
+    usage: /staffmsg <message>
+    permission: hydroxide.channel.staff
   trade:
     description: Send a one-off trade chat message.
     usage: /trade <message>
@@ -265,11 +800,29 @@ commands:
     description: Manage your friend list.
     usage: /friend <add|remove|list> <player>
     permission: hydroxide.command.friend
+  mail:
+    aliases: [ email ]
+    description: Read, send, delete, clear, and expire player mail.
+    usage: /mail [read|send|sendtemp|delete|clear|sendall] ...
+    permission: hydroxide.command.mail
+  mailall:
+    description: Send, clear, or remove matching mail for all known players.
+    usage: /mailall <send|clear|remove> [message]
+    permission: hydroxide.command.mailall
   hydroworld:
     aliases: [ hxworld, hworld ]
     description: Manage Hydroxide worlds.
     usage: /hydroworld <create|load|unload|delete|setrule|list> ...
     permission: hydroxide.command.hydroworld
+  gamerule:
+    description: Set a world gamerule, difficulty, or PVP flag.
+    usage: /gamerule [world] <gamerule|difficulty|pvp> <value>
+    permission: hydroxide.command.gamerule
+  unloadchunks:
+    aliases: [ chunkunload ]
+    description: Unload currently loaded chunks, using gradual batches unless -f is provided.
+    usage: /unloadchunks [-f]
+    permission: hydroxide.command.unloadchunks
   backup:
     aliases: [ hxbackup ]
     description: Start a Hydroxide hot backup.
@@ -296,6 +849,11 @@ commands:
     description: Copy the targeted block into your inventory.
     usage: /pickblock
     permission: hydroxide.builder.pickblock
+  blockcycling:
+    aliases: [ blockcycle ]
+    description: Cycle the targeted block's editable block state.
+    usage: /blockcycling [forward|backward]
+    permission: hydroxide.builder.blockcycling
   wand:
     description: Give a Hydroxide selection wand.
     usage: /wand
@@ -389,14 +947,17 @@ commands:
     usage: /signglow [color]
     permission: hydroxide.item.sign
   bookedit:
+    aliases: [ book ]
     description: Edit a written or writable book page.
-    usage: /bookedit <page> <text>
+    usage: /bookedit <title|author|page|addpage|unlock> ...
     permission: hydroxide.item.edit
   itemname:
+    aliases: [ rename ]
     description: Set the held item display name.
     usage: /itemname <text>
     permission: hydroxide.item.edit
   itemlore:
+    aliases: [ lore ]
     description: Edit held item lore.
     usage: /itemlore <add|set|remove|clear> ...
     permission: hydroxide.item.edit
@@ -404,14 +965,68 @@ commands:
     description: Add or remove held item flags.
     usage: /itemflag <add|remove> <flag>
     permission: hydroxide.item.edit
+  hideflags:
+    aliases: [ itemhideflags ]
+    description: Hide or clear metadata flags on the held item.
+    usage: /hideflags <flag|all|clear> [flag...]
+    permission: hydroxide.item.edit
   itemenchant:
+    aliases: [ enchant ]
     description: Add or remove held item enchantments.
-    usage: /itemenchant <add|remove> <enchantment> [level]
+    usage: /itemenchant [add|remove|clear] <enchantment> [level]
     permission: hydroxide.item.edit
   itemrepair:
+    aliases: [ repair, fix, fixitem ]
     description: Repair the held item.
-    usage: /itemrepair
+    usage: /itemrepair [hand|all]
     permission: hydroxide.item.edit
+  anvilrepaircost:
+    aliases: [ repaircost ]
+    description: Set the held item's anvil repair cost.
+    usage: /anvilrepaircost <amount>
+    permission: hydroxide.item.edit
+  unbreakable:
+    description: Toggle or set the held item's unbreakable state.
+    usage: /unbreakable [player] [true|false|toggle]
+    permission: hydroxide.item.edit
+  more:
+    aliases: [ stack ]
+    description: Fill the held item stack to its max size or a requested amount.
+    usage: /more [amount]
+    permission: hydroxide.item.edit
+  firework:
+    aliases: [ efirework ]
+    description: Modify or launch the held firework rocket stack.
+    usage: /firework <power [amount]|clear|fire [amount]>
+    permission: hydroxide.item.firework
+  dye:
+    aliases: [ leatherdye ]
+    description: Dye held leather armor with RGB, hex, named, random, or clear colors.
+    usage: /dye <red,green,blue|hex|color|random|clear>
+    permission: hydroxide.item.dye
+  itemframe:
+    aliases: [ iframe ]
+    description: Toggle targeted item frame visibility, fixed state, and invulnerability.
+    usage: /itemframe <invisible|fixed|invulnerable|all>
+    permission: hydroxide.item.frame
+  iteminfo:
+    aliases: [ itemdb, itemdata ]
+    description: Show details about the held item.
+    usage: /iteminfo
+    permission: hydroxide.item.info
+  blockinfo:
+    description: Show material, biome, light, and location details for the targeted block.
+    usage: /blockinfo
+    permission: hydroxide.admin.blockinfo
+  entityinfo:
+    description: Show type, UUID, name, and location details for the targeted entity.
+    usage: /entityinfo
+    permission: hydroxide.admin.entityinfo
+  recipe:
+    aliases: [ recipes, method, formula ]
+    description: Show how to craft the held or named item.
+    usage: /recipe [hand|material]
+    permission: hydroxide.item.info
   itemcopy:
     description: Copy the held item.
     usage: /itemcopy
@@ -424,38 +1039,285 @@ commands:
     description: Attach a command to the held item.
     usage: /attachcommand <left|right> <player|console> <uses|infinite> <command...>
     permission: hydroxide.item.attach
+  powertool:
+    aliases: [ pt, power, commandtool ]
+    description: Bind or clear an Essentials-style right-click command on the held item.
+    usage: /powertool <command...|clear>
+    permission: hydroxide.item.attach
+  powertoollist:
+    aliases: [ ptlist, ptl ]
+    description: List the bound command on the held power-tool item.
+    usage: /powertoollist
+    permission: hydroxide.item.attach
+  powertooltoggle:
+    aliases: [ ptt, pttoggle ]
+    description: Toggle whether your bound power tools execute.
+    usage: /powertooltoggle [on|off|toggle]
+    permission: hydroxide.item.attach
   invsee:
     description: Inspect an online player's inventory.
     usage: /invsee <player>
     permission: hydroxide.admin.invsee
+  invsave:
+    description: Save an online player's inventory snapshot.
+    usage: /invsave <player> [id] [-s]
+    permission: hydroxide.admin.invsave
+  give:
+    aliases: [ i ]
+    description: Give an item stack to an online player with CMI-style metadata flags.
+    usage: /give <player> <item> [amount] [n <name>] [l <lore>] [e <enchant:level>] [unbreakable] [-slot:n] [-s]
+    permission: hydroxide.admin.give
+  giveall:
+    aliases: [ itemall ]
+    description: Give an item stack to every online player.
+    usage: /giveall <item> [amount] [n <name>] [l <lore>] [e <enchant:level>] [unbreakable] [-s]
+    permission: hydroxide.admin.giveall
+  donate:
+    description: Donate the held item, or part of the held stack, to an online player.
+    usage: /donate <player> [amount] [-s]
+    permission: hydroxide.command.donate
+  invcheck:
+    description: Preview a saved player inventory snapshot.
+    usage: /invcheck <player> [id|last] [-e]
+    permission: hydroxide.admin.invcheck
+  invload:
+    description: Load a saved inventory snapshot onto an online player.
+    usage: /invload <source> <target> [id|last]
+    permission: hydroxide.admin.invload
+  invlist:
+    description: List saved inventory snapshots for a player.
+    usage: /invlist <player>
+    permission: hydroxide.admin.invlist
+  invremove:
+    description: Remove saved inventory snapshots for a player.
+    usage: /invremove <player> [id|all|last]
+    permission: hydroxide.admin.invremove
+  invremoveall:
+    description: Remove all saved inventory snapshots after confirmation.
+    usage: /invremoveall confirmed
+    permission: hydroxide.admin.invremoveall
   endersee:
     description: Inspect an online player's ender chest.
     usage: /endersee <player>
     permission: hydroxide.admin.endersee
+  enderchest:
+    aliases: [ ec, echest, ender ]
+    description: Open an online player's ender chest for yourself or another online viewer.
+    usage: /enderchest [source] [viewer] [-s]
+    permission: hydroxide.command.enderchest
+  clearender:
+    aliases: [ clearenderchest, cec ]
+    description: Clear your ender chest or another online player's ender chest.
+    usage: /clearender [player] [-s]
+    permission: hydroxide.admin.clearender
+  condense:
+    aliases: [ compact, blocks, toblocks ]
+    description: Condense inventory materials into compact block form.
+    usage: /condense [material]
+    permission: hydroxide.command.condense
+  uncondense:
+    aliases: [ uncompact, unblock, fromblocks ]
+    description: Uncondense compact inventory items into ingredient form.
+    usage: /uncondense [material|all] [player] [-s]
+    permission: hydroxide.command.uncondense
   trash:
+    aliases: [ disposal, dispose ]
     description: Open a disposable trash inventory.
-    usage: /trash
+    usage: /trash [player] [-s]
     permission: hydroxide.admin.trash
   workbench:
+    aliases: [ craft, craftingtable, wb ]
     description: Open a virtual crafting table.
-    usage: /workbench
+    usage: /workbench [player] [-s]
     permission: hydroxide.admin.workbench
   anvil:
     description: Open a virtual anvil.
-    usage: /anvil
+    usage: /anvil [player] [-s]
     permission: hydroxide.admin.anvil
   cartography:
+    aliases: [ cartographytable ]
     description: Open a virtual cartography table.
-    usage: /cartography
+    usage: /cartography [player] [-s]
     permission: hydroxide.admin.cartography
   smithing:
+    aliases: [ smithingtable ]
     description: Open a virtual smithing table.
-    usage: /smithing
+    usage: /smithing [player] [-s]
     permission: hydroxide.admin.smithing
   stonecutter:
     description: Open a virtual stonecutter.
-    usage: /stonecutter
+    usage: /stonecutter [player] [-s]
     permission: hydroxide.admin.stonecutter
+  loom:
+    description: Open a virtual loom.
+    usage: /loom [player] [-s]
+    permission: hydroxide.admin.loom
+  grindstone:
+    aliases: [ grind ]
+    description: Open a virtual grindstone.
+    usage: /grindstone [player] [-s]
+    permission: hydroxide.admin.grindstone
+  clearinventory:
+    aliases: [ clearinv, clearinvent, ci, clean, clear ]
+    description: Clear inventories for yourself, one player, or all online players with optional filters.
+    usage: /clearinventory [player|all] [material[:amount]] [+quickbar|+inventory|+partinventory|+weapons|+armorslots|+tools|+armors|+mainhand|+offhand] [-s]
+    permission: hydroxide.admin.clearinventory
+  hat:
+    description: Wear the item in your main hand as a hat, or update another online player's hat.
+    usage: /hat [player] [-s]
+    permission: hydroxide.command.hat
+  skull:
+    aliases: [ head, playerhead ]
+    description: Give yourself a player head.
+    usage: /skull [player]
+    permission: hydroxide.admin.skull
+  suicide:
+    description: Kill yourself or force another online player to respawn.
+    usage: /suicide [player] [-s]
+    permission: hydroxide.command.suicide
+  kill:
+    aliases: [ slay ]
+    description: Kill an online player with optional CMI-style flags.
+    usage: /kill <player> [-force] [damageCause] [-s] [-lightning]
+    permission: hydroxide.admin.kill
+  killall:
+    aliases: [ butcher ]
+    description: Remove non-player living entities using safe filters.
+    usage: /killall [-monsters|-animals|-ambient|-pets|-all] [-m:type] [-r:radius] [-w:world] [-named] [-lightning] [-list]
+    permission: hydroxide.admin.killall
+  spawnmob:
+    aliases: [ mob, spawnentity ]
+    description: Spawn an entity at your own or another online player's location.
+    usage: /spawnmob <entity> [amount] [player] [-s]
+    permission: hydroxide.admin.spawnmob
+  spawner:
+    aliases: [ changems, mobspawner ]
+    description: Change the mob type of the targeted spawner.
+    usage: /spawner <entity> [player] [-s]
+    permission: hydroxide.admin.spawner
+  solve:
+    aliases: [ calc, calculate ]
+    description: Solve a math expression.
+    usage: /solve <equation>
+    permission: hydroxide.admin.solve
+  sound:
+    aliases: [ playsound ]
+    description: Play a registry-backed sound for players or locations.
+    usage: /sound <sound> [-p:pitch] [-v:volume] [player|-all|-l:player|world;x;y;z] [-r:radius] [-s]
+    permission: hydroxide.admin.sound
+  shakeitoff:
+    aliases: [ dismountall ]
+    description: Dismount entities riding you or another online player.
+    usage: /shakeitoff [player] [-s]
+    permission: hydroxide.command.shakeitoff
+  ride:
+    description: Ride the entity you are looking at.
+    usage: /ride
+    permission: hydroxide.admin.ride
+  groundclean:
+    aliases: [ clearground ]
+    description: Remove ground clutter with CMI-style cleanup flags.
+    usage: /groundclean [+cm] [+cb] [+ci] [+b] [+tnt] [+sh] [+all] [-r:radius] [-w:world] [-s]
+    permission: hydroxide.admin.groundclean
+  remove:
+    aliases: [ removedrops, cleardrops ]
+    description: Remove selected entity groups using Essentials-style selectors.
+    usage: /remove <all|drops|xp|projectiles|boats|minecarts|tnt|fallingblocks|mobs|monsters|animals|named|tamed> [radius|world]
+    permission: hydroxide.admin.remove
+  extinguish:
+    aliases: [ ext ]
+    description: Extinguish yourself or another online player.
+    usage: /extinguish [player] [-s]
+    permission: hydroxide.admin.extinguish
+  burn:
+    aliases: [ ignite ]
+    description: Set an online player on fire.
+    usage: /burn <player> [time] [-s]
+    permission: hydroxide.admin.burn
+  lightning:
+    aliases: [ smite, shock ]
+    description: Strike an online player or location with lightning.
+    usage: /lightning <player|world;x;y;z> [-safe] [-s]
+    permission: hydroxide.admin.lightning
+  fireball:
+    aliases: [ efireball ]
+    description: Launch a small, large, or dragon fireball from yourself or another online player.
+    usage: /fireball [small|large|dragon] [player] [-s]
+    permission: hydroxide.admin.fireball
+  kittycannon:
+    aliases: [ ekittycannon ]
+    description: Launch an exploding kitten from yourself or another online player.
+    usage: /kittycannon [player] [-s]
+    permission: hydroxide.admin.kittycannon
+  beezooka:
+    aliases: [ ebeezooka, beecannon, ebeecannon ]
+    description: Launch an exploding bee from yourself or another online player.
+    usage: /beezooka [player] [-s]
+    permission: hydroxide.admin.beezooka
+  antioch:
+    aliases: [ grenade, tnt, eantioch ]
+    description: Launch a primed TNT grenade from yourself or another online player.
+    usage: /antioch [player] [-s]
+    permission: hydroxide.admin.antioch
+  nuke:
+    aliases: [ enuke ]
+    description: Rain primed TNT around yourself or another online player.
+    usage: /nuke [player] [-s]
+    permission: hydroxide.admin.nuke
+  exp:
+    aliases: [ xp, experience ]
+    description: View or manage player experience levels.
+    usage: /exp [show|give|take|set] [player] [levels]
+    permission: hydroxide.command.exp
+  checkexp:
+    description: Check your own or another online player's experience status.
+    usage: /checkexp [player]
+    permission: hydroxide.command.checkexp
+  distance:
+    aliases: [ dist ]
+    description: Check the distance between yourself and a player, or between two online players.
+    usage: /distance <player> [player]
+    permission: hydroxide.command.distance
+  getpos:
+    aliases: [ position, coords, coordinates ]
+    description: Show your current position or another online player's position.
+    usage: /getpos [player]
+    permission: hydroxide.command.getpos
+  compass:
+    description: Show facing direction or set a player compass target.
+    usage: /compass [target] [source|x z [world]] [-s]|reset [target] [-s]
+    permission: hydroxide.command.compass
+  break:
+    aliases: [ ebreak ]
+    description: Break the block you or another online player is looking at.
+    usage: /break [player] [-s]
+    permission: hydroxide.admin.break
+  counter:
+    description: Start or join a CMI-style countdown counter.
+    usage: /counter <join|leave|start> [t:time] [r:range|-1] [c:world:x:y:z] [msg:message] [-f]
+    permission: hydroxide.command.counter
+  tree:
+    aliases: [ growtree ]
+    description: Generate a tree where you or a target player is looking.
+    usage: /tree [type] [-p:player]
+    permission: hydroxide.admin.tree
+  bigtree:
+    aliases: [ largetree ]
+    description: Generate a large tree where you or a target player is looking.
+    usage: /bigtree [type] [-p:player]
+    permission: hydroxide.admin.tree
+  launch:
+    description: Launch yourself or another online player with CMI-style motion options.
+    usage: /launch [player] [p:power] [a:angle] [d:direction] [loc:x:y:z] [-nodamage] [-s]
+    permission: hydroxide.admin.launch
+  depth:
+    description: Show depth relative to sea level.
+    usage: /depth
+    permission: hydroxide.command.depth
+  findbiome:
+    description: Locate the nearest matching biome from your current location.
+    usage: /findbiome <biome|stop|stopall> [-r:radius]
+    permission: hydroxide.admin.findbiome
   near:
     description: List nearby online players.
     usage: /near [radius]
@@ -464,6 +1326,11 @@ commands:
     description: Show the last seen time for a player.
     usage: /seen <player>
     permission: hydroxide.admin.seen
+  lastonline:
+    aliases: [ lastseenlist ]
+    description: List recently seen players from stored admin snapshots.
+    usage: /lastonline [-p:page]
+    permission: hydroxide.admin.lastonline
   whois:
     description: Show stored identity and location details.
     usage: /whois <player>
@@ -472,10 +1339,56 @@ commands:
     description: Force a player to chat or run a command.
     usage: /sudo <player> <chat|command> <value>
     permission: hydroxide.admin.sudo
+  sudoall:
+    description: Force all online players to chat or run a command.
+    usage: /sudoall <chat|command> <value>
+    permission: hydroxide.admin.sudoall
   staffnote:
-    description: Add, list, or clear staff notes.
-    usage: /staffnote <player> <add|list|clear> [note]
+    description: Add, remove, list, or clear staff notes.
+    usage: /staffnote <player> <add|remove|list|clear> [id|note]
     permission: hydroxide.admin.staffnote
+  note:
+    description: CMI-style alias for staff note management.
+    usage: /note <player> <add|remove|list|clear> [id|note]
+    permission: hydroxide.admin.staffnote
+  alert:
+    description: Add, list, or remove staff login alerts for players.
+    usage: /alert <add|list|remove> [player] [reason] [-s]
+    permission: hydroxide.admin.alert
+  oplist:
+    aliases: [ operators ]
+    description: List known server operators.
+    usage: /oplist
+    permission: hydroxide.admin.oplist
+  checkperm:
+    aliases: [ permissions, permsearch ]
+    description: Search Hydroxide permission nodes by keyword.
+    usage: /checkperm [keyword]
+    permission: hydroxide.admin.checkperm
+  haspermission:
+    aliases: [ hasperm ]
+    description: Check whether an online player has a permission node.
+    usage: /haspermission <player> <permission>
+    permission: hydroxide.admin.haspermission
+  checkaccount:
+    aliases: [ alts, accounts ]
+    description: Find stored accounts sharing a player or IP hash.
+    usage: /checkaccount <player|ip|hash>
+    permission: hydroxide.admin.checkaccount
+  sameip:
+    aliases: [ sameaddress ]
+    description: List known account groups sharing the same stored IP hash.
+    usage: /sameip [query]
+    permission: hydroxide.admin.sameip
+  lockip:
+    description: Restrict a player account to one or more allowed IP hashes.
+    usage: /lockip <player> <add|remove|list|clear> [ip|hash]
+    permission: hydroxide.admin.lockip
+  checkcommand:
+    aliases: [ commandsearch, cmdsearch ]
+    description: Search Hydroxide command metadata by keyword.
+    usage: /checkcommand [keyword]
+    permission: hydroxide.admin.checkcommand
   options:
     description: Open personal Hydroxide options.
     usage: /options [option] [on|off]
@@ -486,37 +1399,191 @@ permissions:
     default: op
     children:
       hydroxide.command.hydroxide: true
+      hydroxide.command.help: true
+      hydroxide.command.disabled.bypass: true
+      hydroxide.command.permission.bypass: true
+      hydroxide.command.cost.bypass: true
+      hydroxide.command.warmup.bypass: true
+      hydroxide.command.cooldown.bypass: true
+      hydroxide.command.cooldown.manage: true
+      hydroxide.command.world-restriction.bypass: true
       hydroxide.command.reload: true
+      hydroxide.command.messages.reload: true
+      hydroxide.command.editlocale: true
       hydroxide.command.broadcast: true
+      hydroxide.command.actionbarmsg: true
+      hydroxide.command.bossbarmsg: true
+      hydroxide.command.titlemsg: true
+      hydroxide.command.ctellraw: true
+      hydroxide.command.me: true
+      hydroxide.command.clearchat: true
+      hydroxide.command.clearchat.bypass: true
+      hydroxide.command.helpop.receive: true
+      hydroxide.command.maintenance: true
+      hydroxide.maintenance.bypass: true
+      hydroxide.command.usermeta: true
+      hydroxide.command.ignore: true
+      hydroxide.command.msgtoggle: true
+      hydroxide.command.chat: true
+      hydroxide.command.message.bypass: true
+      hydroxide.command.socialspy: true
+      hydroxide.command.socialspy.others: true
+      hydroxide.command.commandspy: true
+      hydroxide.command.commandspy.others: true
+      hydroxide.command.chatcolor: true
+      hydroxide.command.chatcolor.others: true
+      hydroxide.command.colors: true
+      hydroxide.command.colorpicker: true
+      hydroxide.command.colorlimits: true
+      hydroxide.command.colorlimits.others: true
+      hydroxide.command.list: true
+      hydroxide.command.ping: true
+      hydroxide.command.ping.others: true
+      hydroxide.command.gc: true
+      hydroxide.command.tps: true
+      hydroxide.command.servertime: true
+      hydroxide.command.ctext: true
+      hydroxide.command.ctext.others: true
+      hydroxide.command.editctext: true
+      hydroxide.command.setmotd: true
+      hydroxide.command.setmotd.notify: true
+      hydroxide.command.status: true
+      hydroxide.command.maxplayers: true
+      hydroxide.command.paytoggle: true
+      hydroxide.command.afk: true
+      hydroxide.command.afk.others: true
+      hydroxide.command.afkcheck: true
       hydroxide.command.setspawn: true
       hydroxide.command.setwarp: true
       hydroxide.command.delwarp: true
+      hydroxide.command.tp: true
+      hydroxide.command.tp.others: true
+      hydroxide.command.tphere: true
+      hydroxide.command.tpo: true
+      hydroxide.command.tpo.others: true
+      hydroxide.command.tpohere: true
+      hydroxide.command.tpall: true
+      hydroxide.command.tpallworld: true
+      hydroxide.command.tppos: true
+      hydroxide.command.tppos.others: true
+      hydroxide.command.tpopos: true
+      hydroxide.command.tpopos.others: true
+      hydroxide.command.dback: true
+      hydroxide.command.dback.others: true
+      hydroxide.command.resetback: true
+      hydroxide.command.jump: true
+      hydroxide.command.down: true
+      hydroxide.command.down.others: true
+      hydroxide.command.world: true
+      hydroxide.command.world.others: true
+      hydroxide.command.patrol: true
+      hydroxide.command.tpa: true
+      hydroxide.command.tpahere: true
+      hydroxide.command.tpaall: true
+      hydroxide.command.tpacancel: true
+      hydroxide.command.tptoggle: true
+      hydroxide.command.tptoggle.bypass: true
+      hydroxide.command.tpauto: true
+      hydroxide.command.tpaccept: true
+      hydroxide.command.tpdeny: true
       hydroxide.command.fly: true
+      hydroxide.command.tfly: true
       hydroxide.command.god: true
+      hydroxide.command.tgod: true
       hydroxide.command.heal: true
       hydroxide.command.feed: true
+      hydroxide.command.hunger: true
+      hydroxide.command.saturation: true
+      hydroxide.command.maxhp: true
+      hydroxide.command.scale: true
+      hydroxide.command.glow: true
+      hydroxide.command.glow.others: true
+      hydroxide.command.glow.color.*: true
+      hydroxide.command.notarget: true
+      hydroxide.command.playercollision: true
+      hydroxide.command.cuff: true
       hydroxide.command.speed: true
       hydroxide.command.gamemode: true
+      hydroxide.command.effect: true
+      hydroxide.command.air: true
+      hydroxide.command.falldistance: true
+      hydroxide.command.kick: true
+      hydroxide.command.kick.bypass: true
+      hydroxide.command.ban: true
+      hydroxide.command.banlist: true
+      hydroxide.command.checkban: true
+      hydroxide.command.tempban: true
+      hydroxide.command.unban: true
+      hydroxide.command.ipban: true
+      hydroxide.command.ipban.bypass: true
+      hydroxide.command.ipbanlist: true
+      hydroxide.command.unbanip: true
+      hydroxide.command.mute: true
+      hydroxide.command.mutechat: true
+      hydroxide.command.mutechat.bypass: true
+      hydroxide.command.tempmute: true
+      hydroxide.command.unmute: true
+      hydroxide.command.warn: true
+      hydroxide.command.warnings: true
+      hydroxide.command.clearwarnings: true
+      hydroxide.command.editwarnings: true
+      hydroxide.command.time: true
+      hydroxide.command.weather: true
+      hydroxide.command.ptime: true
+      hydroxide.command.pweather: true
+      hydroxide.command.cplaytime: true
+      hydroxide.command.cplaytime.others: true
+      hydroxide.command.playtime.others: true
+      hydroxide.command.editplaytime: true
+      hydroxide.command.playtimetop: true
       hydroxide.command.nickname.others: true
       hydroxide.command.realname: true
+      hydroxide.command.nameplate: true
       hydroxide.command.balance.others: true
+      hydroxide.command.baltop: true
+      hydroxide.command.cheque: true
+      hydroxide.command.cheque.others: true
       hydroxide.command.eco: true
       hydroxide.command.groupspawn: true
       hydroxide.command.setjail: true
       hydroxide.command.jail: true
+      hydroxide.command.togglejail: true
       hydroxide.command.unjail: true
+      hydroxide.command.jails: true
+      hydroxide.command.deljail: true
+      hydroxide.command.kit: true
+      hydroxide.command.kits: true
+      hydroxide.command.kit.others: true
+      hydroxide.command.kitcdreset: true
       hydroxide.command.setkit: true
+      hydroxide.command.createkit: true
+      hydroxide.command.delkit: true
+      hydroxide.command.showkit: true
+      hydroxide.command.showkit.others: true
       hydroxide.command.shop.admin: true
+      hydroxide.command.sell: true
+      hydroxide.command.worth: true
+      hydroxide.command.setworth: true
+      hydroxide.command.generateworth: true
+      hydroxide.command.worthlist: true
+      hydroxide.command.worthlist.others: true
       hydroxide.command.portal: true
       hydroxide.command.vanish: true
       hydroxide.command.item: true
       hydroxide.command.bindcommand: true
+      hydroxide.command.server: true
+      hydroxide.command.server.others: true
+      hydroxide.command.serverlist: true
+      hydroxide.command.sendall: true
       hydroxide.command.networkalert: true
       hydroxide.command.hydroworld: true
+      hydroxide.command.gamerule: true
+      hydroxide.command.unloadchunks: true
       hydroxide.command.backup: true
       hydroxide.builder.mode: true
       hydroxide.builder.mode.others: true
       hydroxide.builder.pickblock: true
+      hydroxide.builder.blockcycling: true
       hydroxide.builder.wand: true
       hydroxide.builder.selection: true
       hydroxide.builder.edit: true
@@ -531,23 +1598,119 @@ permissions:
       hydroxide.holo.admin: true
       hydroxide.item.sign: true
       hydroxide.item.edit: true
+      hydroxide.item.firework: true
+      hydroxide.item.dye: true
+      hydroxide.item.frame: true
+      hydroxide.item.info: true
+      hydroxide.admin.blockinfo: true
+      hydroxide.admin.entityinfo: true
       hydroxide.item.attach: true
       hydroxide.item.attach.console: true
       hydroxide.admin.invsee: true
+      hydroxide.admin.invsave: true
+      hydroxide.admin.give: true
+      hydroxide.admin.giveall: true
+      hydroxide.command.donate: true
+      hydroxide.admin.invcheck: true
+      hydroxide.admin.invload: true
+      hydroxide.admin.invlist: true
+      hydroxide.admin.invremove: true
+      hydroxide.admin.invremoveall: true
       hydroxide.admin.endersee: true
+      hydroxide.command.enderchest: true
+      hydroxide.admin.enderchest.others: true
+      hydroxide.admin.clearender: true
+      hydroxide.command.condense: true
+      hydroxide.command.uncondense: true
+      hydroxide.command.uncondense.others: true
       hydroxide.admin.trash: true
       hydroxide.admin.workbench: true
       hydroxide.admin.anvil: true
       hydroxide.admin.cartography: true
       hydroxide.admin.smithing: true
       hydroxide.admin.stonecutter: true
+      hydroxide.admin.loom: true
+      hydroxide.admin.grindstone: true
+      hydroxide.admin.clearinventory: true
+      hydroxide.command.hat: true
+      hydroxide.command.hat.others: true
+      hydroxide.admin.skull: true
+      hydroxide.command.suicide: true
+      hydroxide.command.suicide.others: true
+      hydroxide.admin.kill: true
+      hydroxide.admin.killall: true
+      hydroxide.admin.spawnmob: true
+      hydroxide.admin.spawnmob.others: true
+      hydroxide.admin.spawnmob.all: true
+      hydroxide.admin.spawner: true
+      hydroxide.admin.spawner.others: true
+      hydroxide.admin.spawner.all: true
+      hydroxide.admin.solve: true
+      hydroxide.admin.sound: true
+      hydroxide.command.shakeitoff: true
+      hydroxide.admin.shakeitoff.others: true
+      hydroxide.admin.ride: true
+      hydroxide.admin.ride.*: true
+      hydroxide.admin.groundclean: true
+      hydroxide.admin.remove: true
+      hydroxide.admin.extinguish: true
+      hydroxide.admin.burn: true
+      hydroxide.admin.lightning: true
+      hydroxide.admin.fireball: true
+      hydroxide.admin.fireball.others: true
+      hydroxide.admin.kittycannon: true
+      hydroxide.admin.kittycannon.others: true
+      hydroxide.admin.beezooka: true
+      hydroxide.admin.beezooka.others: true
+      hydroxide.admin.antioch: true
+      hydroxide.admin.antioch.others: true
+      hydroxide.admin.nuke: true
+      hydroxide.admin.nuke.others: true
+      hydroxide.command.exp: true
+      hydroxide.admin.exp: true
+      hydroxide.command.checkexp: true
+      hydroxide.command.distance: true
+      hydroxide.command.compass.others: true
+      hydroxide.admin.break: true
+      hydroxide.admin.break.others: true
+      hydroxide.command.counter: true
+      hydroxide.admin.counter: true
+      hydroxide.admin.counter.force: true
+      hydroxide.admin.counter.time: true
+      hydroxide.admin.counter.range: true
+      hydroxide.admin.counter.msg: true
+      hydroxide.admin.counter.autojoin: true
+      hydroxide.admin.tree: true
+      hydroxide.admin.tree.others: true
+      hydroxide.admin.launch: true
+      hydroxide.admin.launch.others: true
+      hydroxide.admin.getpos.others: true
+      hydroxide.admin.findbiome: true
       hydroxide.admin.near: true
       hydroxide.admin.seen: true
+      hydroxide.admin.lastonline: true
       hydroxide.admin.whois: true
       hydroxide.admin.ip: true
       hydroxide.admin.sudo: true
+      hydroxide.admin.sudoall: true
       hydroxide.admin.staffnote: true
+      hydroxide.admin.alert: true
+      hydroxide.admin.alert.inform: true
+      hydroxide.admin.oplist: true
+      hydroxide.admin.checkperm: true
+      hydroxide.admin.haspermission: true
+      hydroxide.admin.checkaccount: true
+      hydroxide.admin.checkaccount.ip: true
+      hydroxide.admin.sameip: true
+      hydroxide.admin.sameip.hash: true
+      hydroxide.admin.lockip: true
+      hydroxide.admin.checkcommand: true
       hydroxide.command.options: true
+      hydroxide.command.mail: true
+      hydroxide.command.mail.others: true
+      hydroxide.command.mail.sendtemp: true
+      hydroxide.command.mail.sendall: true
+      hydroxide.command.mailall: true
       hydroxide.channel.staff: true
       hydroxide.lock.bypass: true
       hydroxide.vanish.see: true
@@ -561,8 +1724,27 @@ permissions:
     default: true
     children:
       hydroxide.command.hydroxide: true
+      hydroxide.command.help: true
+      hydroxide.command.motd: true
+      hydroxide.command.info: true
+      hydroxide.command.rules: true
+      hydroxide.command.ctext: true
+      hydroxide.command.helpop: true
+      hydroxide.command.list: true
+      hydroxide.command.ping: true
+      hydroxide.command.servertime: true
       hydroxide.command.message: true
       hydroxide.command.reply: true
+      hydroxide.command.chat: true
+      hydroxide.command.me: true
+      hydroxide.command.ignore: true
+      hydroxide.command.msgtoggle: true
+      hydroxide.command.chatcolor: true
+      hydroxide.command.colors: true
+      hydroxide.command.colorpicker: true
+      hydroxide.command.colorlimits: true
+      hydroxide.command.afk: true
+      hydroxide.command.afkcheck: true
       hydroxide.command.spawn: true
       hydroxide.command.home: true
       hydroxide.command.sethome: true
@@ -571,27 +1753,60 @@ permissions:
       hydroxide.command.warp: true
       hydroxide.command.warps: true
       hydroxide.command.back: true
+      hydroxide.command.dback: true
       hydroxide.command.tpa: true
+      hydroxide.command.tpahere: true
+      hydroxide.command.tpacancel: true
+      hydroxide.command.tptoggle: true
+      hydroxide.command.tpauto: true
       hydroxide.command.tpaccept: true
       hydroxide.command.tpdeny: true
       hydroxide.command.nickname: true
       hydroxide.command.realname: true
       hydroxide.command.balance: true
+      hydroxide.command.baltop: true
       hydroxide.command.pay: true
+      hydroxide.command.paytoggle: true
+      hydroxide.command.cheque: true
       hydroxide.command.homesgui: true
       hydroxide.command.warpgui: true
       hydroxide.command.kit: true
       hydroxide.command.kits: true
       hydroxide.command.shop: true
+      hydroxide.command.sell: true
+      hydroxide.command.worth: true
+      hydroxide.command.worthlist: true
       hydroxide.command.lock: true
       hydroxide.command.unlock: true
       hydroxide.command.backpack: true
       hydroxide.command.pv: true
       hydroxide.command.rtp: true
       hydroxide.command.top: true
+      hydroxide.command.playtime: true
+      hydroxide.command.cplaytime: true
       hydroxide.command.server: true
+      hydroxide.command.serverlist: true
       hydroxide.command.channel: true
       hydroxide.command.party: true
       hydroxide.command.friend: true
+      hydroxide.command.mail: true
       hydroxide.command.options: true
+      hydroxide.command.enderchest: true
+      hydroxide.command.condense: true
+      hydroxide.command.uncondense: true
+      hydroxide.command.donate: true
+      hydroxide.command.hat: true
+      hydroxide.command.shakeitoff: true
+      hydroxide.command.suicide: true
+      hydroxide.item.dye: true
+      hydroxide.item.info: true
+      hydroxide.command.ptime: true
+      hydroxide.command.pweather: true
+      hydroxide.command.exp: true
+      hydroxide.command.checkexp: true
+      hydroxide.command.distance: true
+      hydroxide.command.getpos: true
+      hydroxide.command.compass: true
+      hydroxide.command.counter: true
+      hydroxide.command.depth: true
       hydroxide.channel.trade: true

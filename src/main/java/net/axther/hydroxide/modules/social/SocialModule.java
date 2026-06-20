@@ -2,13 +2,12 @@ package net.axther.hydroxide.modules.social;
 
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
@@ -22,9 +21,10 @@ import org.bukkit.projectiles.ProjectileSource;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 
-public final class SocialModule implements HydroModule, Listener, CommandExecutor, TabCompleter {
+public final class SocialModule implements HydroModule, Listener {
 
     private static final List<String> PARTY_ACTIONS = List.of("accept", "chat", "ff", "invite", "leave");
     private static final List<String> FRIEND_ACTIONS = List.of("add", "list", "remove");
@@ -57,9 +57,9 @@ public final class SocialModule implements HydroModule, Listener, CommandExecuto
         this.context = context;
         this.parties = new PartyService();
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("party", this);
-        context.commands().register("p", this);
-        context.commands().register("friend", this);
+        context.commands().register("party", partyCommand());
+        context.commands().register("p", partyChatCommand());
+        context.commands().register("friend", friendCommand());
     }
 
     @Override
@@ -67,46 +67,54 @@ public final class SocialModule implements HydroModule, Listener, CommandExecuto
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can use social commands.");
-            return true;
-        }
-        if (command.getName().equalsIgnoreCase("p")) {
-            return partyChat(player, args);
-        }
-        if (command.getName().equalsIgnoreCase("friend")) {
-            return friend(player, label, args);
-        }
-        return party(player, label, args);
+    private CommandService partyCommand() {
+        return new CommandService(HydroCommand.builder("party")
+                .permission("hydroxide.command.party")
+                .playerOnly(true)
+                .usage("/{label} <invite|accept|leave|ff|chat> ...")
+                .executor(ctx -> party((Player) ctx.sender(), ctx.label(), ctx.arguments()))
+                .completer(ctx -> partyCompletions(ctx.arguments()))
+                .build(), context.messages());
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        String name = command.getName().toLowerCase(Locale.ROOT);
-        if (name.equals("p")) {
-            return List.of();
+    private CommandService partyChatCommand() {
+        return new CommandService(HydroCommand.builder("p")
+                .permission("hydroxide.command.party")
+                .playerOnly(true)
+                .usage("/{label} <message>")
+                .executor(ctx -> partyChat((Player) ctx.sender(), ctx.arguments()))
+                .build(), context.messages());
+    }
+
+    private CommandService friendCommand() {
+        return new CommandService(HydroCommand.builder("friend")
+                .permission("hydroxide.command.friend")
+                .playerOnly(true)
+                .usage("/{label} <add|remove|list> <player>")
+                .executor(ctx -> friend((Player) ctx.sender(), ctx.label(), ctx.arguments()))
+                .completer(ctx -> friendCompletions(ctx.arguments()))
+                .build(), context.messages());
+    }
+
+    private List<String> partyCompletions(List<String> args) {
+        if (args.size() <= 1) {
+            return CommandUtils.matching(args.isEmpty() ? "" : args.get(0), PARTY_ACTIONS);
         }
-        if (name.equals("party")) {
-            if (args.length == 1) {
-                return CommandUtils.matching(args[0], PARTY_ACTIONS);
-            }
-            if (args.length == 2 && args[0].equalsIgnoreCase("invite")) {
-                return net.axther.hydroxide.commands.CompletionUtils.onlinePlayers(args[1]);
-            }
-            if (args.length == 2 && args[0].equalsIgnoreCase("ff")) {
-                return CommandUtils.matching(args[1], List.of("off", "on"));
-            }
+        if (args.size() == 2 && args.get(0).equalsIgnoreCase("invite")) {
+            return net.axther.hydroxide.commands.CompletionUtils.onlinePlayers(args.get(1));
         }
-        if (name.equals("friend")) {
-            if (args.length == 1) {
-                return CommandUtils.matching(args[0], FRIEND_ACTIONS);
-            }
-            if (args.length == 2 && (args[0].equalsIgnoreCase("add") || args[0].equalsIgnoreCase("remove"))) {
-                return net.axther.hydroxide.commands.CompletionUtils.onlinePlayers(args[1]);
-            }
+        if (args.size() == 2 && args.get(0).equalsIgnoreCase("ff")) {
+            return CommandUtils.matching(args.get(1), List.of("off", "on"));
+        }
+        return List.of();
+    }
+
+    private List<String> friendCompletions(List<String> args) {
+        if (args.size() <= 1) {
+            return CommandUtils.matching(args.isEmpty() ? "" : args.get(0), FRIEND_ACTIONS);
+        }
+        if (args.size() == 2 && (args.get(0).equalsIgnoreCase("add") || args.get(0).equalsIgnoreCase("remove"))) {
+            return net.axther.hydroxide.commands.CompletionUtils.onlinePlayers(args.get(1));
         }
         return List.of();
     }
@@ -130,93 +138,99 @@ public final class SocialModule implements HydroModule, Listener, CommandExecuto
         notifyFriends(event.getPlayer(), false);
     }
 
-    private boolean party(Player player, String label, String[] args) {
-        if (args.length == 0) {
-            context.send(player, "<red>Usage: /" + label + " <invite|accept|leave|ff|chat> ...");
-            return true;
+    private void party(Player player, String label, List<String> args) {
+        if (args.isEmpty()) {
+            context.message(player, "social.party.usage", Map.of("label", label));
+            return;
         }
-        switch (args[0].toLowerCase(Locale.ROOT)) {
+        switch (args.get(0).toLowerCase(Locale.ROOT)) {
             case "invite" -> {
-                Player target = args.length > 1 ? Bukkit.getPlayerExact(args[1]) : null;
+                Player target = args.size() > 1 ? Bukkit.getPlayerExact(args.get(1)) : null;
                 if (target == null) {
-                    context.send(player, "<red>That player is not online.");
-                    return true;
+                    context.message(player, "social.party.player-offline", Map.of());
+                    return;
                 }
                 parties.invite(player.getUniqueId(), target.getUniqueId());
-                context.send(player, "<green>Invited <white>" + target.getName() + "<green> to your party.");
-                context.send(target, "<white>" + player.getName() + " <#44CCFF>invited you to a party. <gray>/party accept");
+                context.message(player, "social.party.invited", Map.of("target", target.getName()));
+                context.message(target, "social.party.invite-received", Map.of("player", player.getName()));
             }
-            case "accept" -> context.send(player, parties.accept(player.getUniqueId())
-                    ? "<green>Joined the party."
-                    : "<red>You do not have a pending party invite.");
+            case "accept" -> context.message(player, parties.accept(player.getUniqueId())
+                    ? "social.party.joined"
+                    : "social.party.no-invite", Map.of());
             case "leave" -> {
                 parties.leave(player.getUniqueId());
-                context.send(player, "<green>Left your party.");
+                context.message(player, "social.party.left", Map.of());
             }
             case "ff" -> {
-                boolean allowed = args.length > 1 && args[1].equalsIgnoreCase("on");
+                boolean allowed = args.size() > 1 && args.get(1).equalsIgnoreCase("on");
                 parties.setFriendlyFire(player.getUniqueId(), allowed);
-                context.send(player, "<green>Party friendly fire: <white>" + (allowed ? "on" : "off"));
+                context.message(player, "social.party.friendly-fire", Map.of("state", allowed ? "on" : "off"));
             }
-            case "chat" -> partyChat(player, java.util.Arrays.copyOfRange(args, 1, args.length));
-            default -> context.send(player, "<red>Usage: /" + label + " <invite|accept|leave|ff|chat> ...");
+            case "chat" -> partyChat(player, args.subList(1, args.size()));
+            default -> context.message(player, "social.party.usage", Map.of("label", label));
         }
-        return true;
     }
 
-    private boolean partyChat(Player player, String[] args) {
-        if (args.length == 0) {
-            context.send(player, "<red>Usage: /p <message>");
-            return true;
+    private void partyChat(Player player, List<String> args) {
+        if (args.isEmpty()) {
+            context.message(player, "social.party.chat-usage", Map.of("label", "p"));
+            return;
         }
         PartyService.Party party = parties.party(player.getUniqueId()).orElse(null);
         if (party == null) {
-            context.send(player, "<red>You are not in a party.");
-            return true;
+            context.message(player, "social.party.not-in-party", Map.of());
+            return;
         }
-        String message = CommandUtils.joinArgs(args, 0);
+        String message = CommandUtils.joinArgs(args.toArray(String[]::new), 0);
+        Component rendered = context.messages().component("social.party.chat-format", Map.of(
+                "player", player.getName(),
+                "message", message
+        ));
         for (UUID memberId : party.members()) {
             Player member = Bukkit.getPlayer(memberId);
             if (member != null) {
-                member.sendMessage(context.text().format("<dark_gray>[<#44CCFF>Party</#44CCFF>] <white>" + player.getName() + "<dark_gray>: <white>" + message));
+                member.sendMessage(rendered);
             }
         }
-        return true;
     }
 
-    private boolean friend(Player player, String label, String[] args) {
-        if (args.length == 0) {
-            context.send(player, "<red>Usage: /" + label + " <add|remove|list> <player>");
-            return true;
+    private void friend(Player player, String label, List<String> args) {
+        if (args.isEmpty()) {
+            context.message(player, "social.friend.usage", Map.of("label", label));
+            return;
         }
-        if (args[0].equalsIgnoreCase("list")) {
+        if (args.get(0).equalsIgnoreCase("list")) {
             List<String> friendNames = context.playerData().friends(player.getUniqueId()).stream()
                     .map(this::knownName)
                     .toList();
-            context.send(player, friendNames.isEmpty()
-                    ? "<gray>You do not have any friends added."
-                    : "<green>Friends: <white>" + String.join("<gray>, <white>", friendNames));
-            return true;
+            context.message(player, friendNames.isEmpty() ? "social.friend.empty" : "social.friend.list",
+                    Map.of("friends", String.join("<gray>, <white>", friendNames)));
+            return;
         }
-        if (args.length < 2) {
-            context.send(player, "<red>Usage: /" + label + " <add|remove|list> <player>");
-            return true;
+        if (args.size() < 2) {
+            context.message(player, "social.friend.usage", Map.of("label", label));
+            return;
         }
-        OfflinePlayer target = Bukkit.getOfflinePlayer(args[1]);
-        if (args[0].equalsIgnoreCase("remove")) {
-            boolean removed = context.playerData().removeFriend(player.getUniqueId(), target.getUniqueId());
-            context.send(player, removed ? "<green>Removed friend." : "<red>That player was not on your friend list.");
-        } else {
-            context.playerData().addFriend(player.getUniqueId(), target.getUniqueId());
-            context.send(player, "<green>Added friend.");
+        OfflinePlayer target = Bukkit.getOfflinePlayer(args.get(1));
+        switch (args.get(0).toLowerCase(Locale.ROOT)) {
+            case "remove" -> {
+                boolean removed = context.playerData().removeFriend(player.getUniqueId(), target.getUniqueId());
+                context.message(player, removed ? "social.friend.removed" : "social.friend.not-friend",
+                        Map.of("target", knownName(target.getUniqueId())));
+            }
+            case "add" -> {
+                context.playerData().addFriend(player.getUniqueId(), target.getUniqueId());
+                context.message(player, "social.friend.added", Map.of("target", knownName(target.getUniqueId())));
+            }
+            default -> context.message(player, "social.friend.usage", Map.of("label", label));
         }
-        return true;
     }
 
     private void notifyFriends(Player player, boolean joined) {
         for (Player online : Bukkit.getOnlinePlayers()) {
             if (context.playerData().friends(online.getUniqueId()).contains(player.getUniqueId())) {
-                context.send(online, "<white>" + player.getName() + (joined ? " <green>joined" : " <red>left") + " <gray>the server.");
+                context.message(online, joined ? "social.friend.notify-join" : "social.friend.notify-quit",
+                        Map.of("player", player.getName()));
             }
         }
     }

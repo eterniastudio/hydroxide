@@ -131,6 +131,31 @@ public final class YamlPlayerDataStore implements PlayerDataStore {
     }
 
     @Override
+    public Map<UUID, Double> balances() {
+        File playerDirectory = new File(plugin.getDataFolder(), "data/players");
+        File[] files = playerDirectory.listFiles((directory, name) -> name.endsWith(".yml"));
+        if (files == null || files.length == 0) {
+            return Map.of();
+        }
+
+        Map<UUID, Double> balances = new HashMap<>();
+        for (File file : files) {
+            String fileName = file.getName().substring(0, file.getName().length() - ".yml".length());
+            UUID playerId;
+            try {
+                playerId = UUID.fromString(fileName);
+            } catch (IllegalArgumentException ignored) {
+                continue;
+            }
+            YamlConfiguration yaml = YamlConfiguration.loadConfiguration(file);
+            if (yaml.contains("economy.balance")) {
+                balances.put(playerId, yaml.getDouble("economy.balance"));
+            }
+        }
+        return Map.copyOf(balances);
+    }
+
+    @Override
     public List<UUID> friends(UUID playerId) {
         return friends.load().getStringList(friendPath(playerId)).stream()
                 .map(this::parseUuid)

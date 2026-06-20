@@ -1,16 +1,14 @@
 package net.axther.hydroxide.modules.protection;
 
 import net.axther.hydroxide.HydroxideContext;
-import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.YamlStore;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.Tag;
 import org.bukkit.block.Block;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
@@ -28,9 +26,11 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import java.io.File;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 
-public final class ProtectionModule implements HydroModule, Listener, CommandExecutor {
+public final class ProtectionModule implements HydroModule, Listener {
 
     private HydroxideContext context;
     private YamlStore lockStore;
@@ -62,8 +62,8 @@ public final class ProtectionModule implements HydroModule, Listener, CommandExe
         this.lockStore = new YamlStore(new File(context.plugin().getDataFolder(), "locks.yml"));
         this.settingsStore = new YamlStore(new File(context.plugin().getDataFolder(), "world_settings.yml"));
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("lock", this);
-        context.commands().register("unlock", this);
+        context.commands().register("lock", command("lock", "hydroxide.command.lock", player -> lock(player, false)));
+        context.commands().register("unlock", command("unlock", "hydroxide.command.unlock", player -> lock(player, true)));
     }
 
     @Override
@@ -71,35 +71,37 @@ public final class ProtectionModule implements HydroModule, Listener, CommandExe
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can lock blocks.");
-            return true;
-        }
+    private CommandService command(String name, String permission, Consumer<Player> executor) {
+        return new CommandService(HydroCommand.builder(name)
+                .permission(permission)
+                .playerOnly(true)
+                .usage("/{label}")
+                .executor(ctx -> executor.accept((Player) ctx.sender()))
+                .build(), context.messages());
+    }
+
+    private void lock(Player player, boolean unlock) {
         Block target = player.getTargetBlockExact(5);
         if (target == null || !lockable(target.getType())) {
-            context.send(sender, "<red>Look at a chest, furnace, barrel, door, or similar block.");
-            return true;
+            context.message(player, "protection.target-required", Map.of());
+            return;
         }
         YamlConfiguration yaml = lockStore.load();
         String key = key(target);
-        if (command.getName().equalsIgnoreCase("unlock")) {
+        if (unlock) {
             if (!owns(player, yaml.getString("locks." + key + ".owner")) && !player.hasPermission("hydroxide.lock.bypass")) {
-                context.send(player, "<red>You do not own that lock.");
-                return true;
+                context.message(player, "protection.not-owner", Map.of());
+                return;
             }
             yaml.set("locks." + key, null);
             lockStore.save(yaml);
-            context.send(player, "<green>Unlocked.");
-            return true;
+            context.message(player, "protection.unlocked", Map.of());
+            return;
         }
         yaml.set("locks." + key + ".owner", player.getUniqueId().toString());
         yaml.set("locks." + key + ".name", player.getName());
         lockStore.save(yaml);
-        context.send(player, "<green>Locked.");
-        return true;
+        context.message(player, "protection.locked", Map.of());
     }
 
     @EventHandler
@@ -120,7 +122,7 @@ public final class ProtectionModule implements HydroModule, Listener, CommandExe
         String owner = lockStore.load().getString("locks." + key(block) + ".owner");
         if (owner != null && !owns(event.getPlayer(), owner) && !event.getPlayer().hasPermission("hydroxide.lock.bypass")) {
             event.setCancelled(true);
-            context.send(event.getPlayer(), "<red>That block is locked.");
+            context.message(event.getPlayer(), "protection.access-denied", Map.of());
         }
     }
 
@@ -161,7 +163,7 @@ public final class ProtectionModule implements HydroModule, Listener, CommandExe
         List<String> blacklist = settingsStore.load().getStringList("worlds." + event.getBlock().getWorld().getName() + ".block-blacklist");
         if (blacklist.stream().map(value -> value.toUpperCase(Locale.ROOT)).anyMatch(event.getBlock().getType().name()::equals)) {
             event.setCancelled(true);
-            context.send(event.getPlayer(), "<red>That block is restricted in this world.");
+            context.message(event.getPlayer(), "protection.block-restricted", Map.of());
         }
     }
 

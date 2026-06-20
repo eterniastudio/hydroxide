@@ -79,7 +79,12 @@ public final class ChatFilterModule implements HydroModule, Listener {
         } else {
             event.message(context.text().format(result.message()));
         }
-        event.getPlayer().sendMessage(context.text().format(yaml.getString("messages.warning", "<red>Please keep chat clean.")));
+        String legacyWarning = yaml.getString("messages.warning", "");
+        if (legacyWarning == null || legacyWarning.isBlank()) {
+            context.message(event.getPlayer(), "chat-filter.warning", Map.of("rules", String.join(",", result.rules()), "strikes", result.strikes()));
+        } else {
+            event.getPlayer().sendMessage(context.text().format(legacyWarning));
+        }
         postWebhook(yaml, event.getPlayer().getName(), event.getPlayer().getUniqueId().toString(), context.text().plain(event.message()), result);
         escalate(yaml, event.getPlayer().getName(), result.strikes());
     }
@@ -144,7 +149,6 @@ public final class ChatFilterModule implements HydroModule, Listener {
         yaml.set("strikes.threshold", 3);
         yaml.set("strikes.commands", List.of("kick {player} Please keep chat clean."));
         yaml.set("discord.webhook-url", "");
-        yaml.set("messages.warning", "<red>Your message was flagged by the chat filter.");
         store.save(yaml);
     }
 }

@@ -13,6 +13,10 @@ public final class YamlStore {
         this.file = file;
     }
 
+    public File file() {
+        return file;
+    }
+
     public YamlConfiguration load() {
         ensureParent();
         return YamlConfiguration.loadConfiguration(file);

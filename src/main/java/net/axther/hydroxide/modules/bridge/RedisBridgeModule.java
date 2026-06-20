@@ -17,6 +17,7 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -55,7 +56,7 @@ public final class RedisBridgeModule implements HydroModule, Listener {
     public void onEnable(HydroxideContext context) {
         this.context = context;
         if (!context.plugin().getConfig().getBoolean("redis-bridge.enabled", false)) {
-            context.plugin().getLogger().info("Redis bridge module enabled but redis-bridge.enabled is false; bridge is idle.");
+            context.plugin().getLogger().info(plain("redis-bridge.log.idle", Map.of()));
             return;
         }
         this.executor = Executors.newFixedThreadPool(2);
@@ -93,7 +94,7 @@ public final class RedisBridgeModule implements HydroModule, Listener {
             writeCommand(writer, "PUBLISH", channel(), payload);
             writer.flush();
         } catch (IOException exception) {
-            context.plugin().getLogger().warning("Redis bridge publish failed: " + exception.getMessage());
+            context.plugin().getLogger().warning(plain("redis-bridge.log.publish-failed", Map.of("reason", exception.getMessage())));
         }
     }
 
@@ -113,14 +114,14 @@ public final class RedisBridgeModule implements HydroModule, Listener {
                     if (serverId().equals(message.serverId())) {
                         continue;
                     }
-                    Bukkit.getScheduler().runTask(context.plugin(), () -> Bukkit.broadcast(context.text().format(
-                            "<dark_gray>[<#44CCFF>" + message.serverId() + "</#44CCFF>] <white>"
-                                    + message.sender() + "<dark_gray>: <white>" + message.message()
+                    Bukkit.getScheduler().runTask(context.plugin(), () -> Bukkit.broadcast(context.messages().component(
+                            "redis-bridge.chat-format",
+                            Map.of("server", message.serverId(), "player", message.sender(), "message", message.message())
                     )));
                 }
             } catch (IOException exception) {
                 if (running) {
-                    context.plugin().getLogger().warning("Redis bridge subscribe failed: " + exception.getMessage());
+                    context.plugin().getLogger().warning(plain("redis-bridge.log.subscribe-failed", Map.of("reason", exception.getMessage())));
                     sleep();
                 }
             }
@@ -169,5 +170,9 @@ public final class RedisBridgeModule implements HydroModule, Listener {
 
     private String serverId() {
         return context.plugin().getConfig().getString("redis-bridge.server-id", "server");
+    }
+
+    private String plain(String key, Map<String, ?> placeholders) {
+        return context.text().plain(context.messages().component(key, placeholders));
     }
 }

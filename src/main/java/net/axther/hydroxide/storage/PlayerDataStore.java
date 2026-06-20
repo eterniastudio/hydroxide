@@ -33,6 +33,8 @@ public interface PlayerDataStore extends AutoCloseable {
 
     void setBalance(UUID playerId, double balance);
 
+    Map<UUID, Double> balances();
+
     List<UUID> friends(UUID playerId);
 
     void addFriend(UUID playerId, UUID friendId);

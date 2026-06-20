@@ -3,26 +3,30 @@ package net.axther.hydroxide.modules.nickname;
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.api.event.PlayerNicknameChangeEvent;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
+import net.axther.hydroxide.storage.YamlStore;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 
+import java.io.File;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
-public final class NicknameModule implements HydroModule, Listener, CommandExecutor, TabCompleter {
+public final class NicknameModule implements HydroModule, Listener {
 
     private NicknameService service;
     private HydroxideContext context;
     private NicknameService.NicknamePolicy policy;
+    private YamlStore nameplateYaml;
+    private NameplateStore nameplateStore;
 
     @Override
     public String id() {
@@ -50,13 +54,18 @@ public final class NicknameModule implements HydroModule, Listener, CommandExecu
         this.service = new NicknameService(context.text());
         this.policy = loadPolicy(context);
         service.load(context.playerData());
+        this.nameplateYaml = new YamlStore(new File(context.plugin().getDataFolder(), "nameplates.yml"));
+        this.nameplateStore = NameplateStore.from(nameplateYaml.load());
+        nameplateStore.entries().values().forEach(entry ->
+                service.cacheNameplate(entry.playerId(), entry.state()));
         context.services().nicknameService(service);
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("nickname", this);
-        context.commands().register("realname", this);
+        context.commands().register("nickname", nicknameCommand());
+        context.commands().register("realname", realNameCommand());
+        context.commands().register("nameplate", nameplateCommand());
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            context.playerData().nickname(player.getUniqueId()).ifPresent(nickname -> service.apply(player, nickname));
+            applyStoredDisplay(player);
         }
     }
 
@@ -69,34 +78,74 @@ public final class NicknameModule implements HydroModule, Listener, CommandExecu
         }
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        return switch (command.getName().toLowerCase(Locale.ROOT)) {
-            case "nickname" -> nickname(sender, label, args);
-            case "realname" -> realName(sender, label, args);
-            default -> true;
-        };
+    @EventHandler
+    public void onJoin(PlayerJoinEvent event) {
+        applyStoredDisplay(event.getPlayer());
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (command.getName().equalsIgnoreCase("nickname") && args.length == 1) {
+    private CommandService nicknameCommand() {
+        return new CommandService(HydroCommand.builder("nickname")
+                .permission("hydroxide.command.nickname")
+                .usage("/{label} [player] <nickname|clear>")
+                .executor(ctx -> nickname(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(ctx -> nicknameCompletions(ctx.sender(), ctx.arguments()))
+                .build(), context.messages());
+    }
+
+    private CommandService realNameCommand() {
+        return new CommandService(HydroCommand.builder("realname")
+                .permission("hydroxide.command.realname")
+                .usage("/{label} <nickname>")
+                .executor(ctx -> realName(ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .build(), context.messages());
+    }
+
+    private CommandService nameplateCommand() {
+        return new CommandService(HydroCommand.builder("nameplate")
+                .permission("hydroxide.command.nameplate")
+                .usage("/{label} [player] [-pref:<text>] [-suf:<text>] [-c:<color|reset>] [reset] [-s]")
+                .executor(ctx -> nameplate(ctx.sender(), ctx.label(), ctx.arguments()))
+                .completer(ctx -> nameplateCompletions(ctx.sender(), ctx.arguments()))
+                .build(), context.messages());
+    }
+
+    private List<String> nicknameCompletions(CommandSender sender, List<String> args) {
+        if (args.size() <= 1) {
             java.util.ArrayList<String> suggestions = new java.util.ArrayList<>(List.of("clear"));
             if (sender.hasPermission("hydroxide.command.nickname.others")) {
                 suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
             }
-            return CommandUtils.matching(args[0], suggestions);
+            return CommandUtils.matching(args.isEmpty() ? "" : args.get(0), suggestions);
         }
-        if (command.getName().equalsIgnoreCase("nickname") && args.length <= 2) {
-            return CommandUtils.matching(args[args.length - 1], List.of("clear"));
+        if (args.size() == 2) {
+            return CommandUtils.matching(args.get(1), List.of("clear"));
         }
         return List.of();
     }
 
-    @EventHandler
-    public void onJoin(PlayerJoinEvent event) {
-        Player player = event.getPlayer();
-        context.playerData().nickname(player.getUniqueId()).ifPresent(nickname -> service.apply(player, nickname));
+    private List<String> nameplateCompletions(CommandSender sender, List<String> args) {
+        String prefix = args.isEmpty() ? "" : args.getLast();
+        if (args.size() <= 1) {
+            java.util.ArrayList<String> suggestions = new java.util.ArrayList<>(List.of(
+                    "reset",
+                    "-pref:",
+                    "-suf:",
+                    "-c:red",
+                    "-c:green",
+                    "-c:blue",
+                    "-c:reset",
+                    "-s"
+            ));
+            suggestions.addAll(Bukkit.getOnlinePlayers().stream().map(Player::getName).toList());
+            return CommandUtils.matching(prefix, suggestions);
+        }
+        if (prefix.toLowerCase(java.util.Locale.ROOT).startsWith("-c:")) {
+            String colorPrefix = prefix.substring(3);
+            return NameplateCommandParser.parseColor(colorPrefix).isPresent()
+                    ? List.of()
+                    : CommandUtils.matching(prefix, List.of("-c:red", "-c:green", "-c:blue", "-c:gold", "-c:white", "-c:reset"));
+        }
+        return CommandUtils.matching(prefix, List.of("-pref:", "-suf:", "-c:", "reset", "-s"));
     }
 
     private boolean nickname(CommandSender sender, String label, String[] args) {
@@ -104,7 +153,7 @@ public final class NicknameModule implements HydroModule, Listener, CommandExecu
             return true;
         }
         if (args.length == 0) {
-            context.send(sender, "<red>Usage: /" + label + " [player] <nickname|clear>");
+            context.message(sender, "nickname.usage", Map.of("label", label));
             return true;
         }
 
@@ -117,12 +166,12 @@ public final class NicknameModule implements HydroModule, Listener, CommandExecu
             PlayerNicknameChangeEvent event = new PlayerNicknameChangeEvent(parsed.target(), sender, oldNickname, null);
             Bukkit.getPluginManager().callEvent(event);
             if (event.isCancelled()) {
-                context.send(sender, "<red>Nickname change was cancelled by another plugin.");
+                context.message(sender, "nickname.cancelled", Map.of());
                 return true;
             }
             context.playerData().removeNickname(parsed.target().getUniqueId());
             service.reset(parsed.target());
-            context.send(sender, "<green>Nickname cleared for <white>" + parsed.target().getName() + "<green>.");
+            context.message(sender, "nickname.cleared", Map.of("target", parsed.target().getName()));
             return true;
         }
 
@@ -131,7 +180,7 @@ public final class NicknameModule implements HydroModule, Listener, CommandExecu
         }
         NicknameService.ValidationResult validation = NicknameService.validateNickname(parsed.nickname(), policy);
         if (!validation.valid()) {
-            context.send(sender, "<red>" + validation.message());
+            context.message(sender, "nickname.validation-error", Map.of("reason", validation.message()));
             return true;
         }
 
@@ -139,15 +188,73 @@ public final class NicknameModule implements HydroModule, Listener, CommandExecu
         PlayerNicknameChangeEvent event = new PlayerNicknameChangeEvent(parsed.target(), sender, oldNickname, parsed.nickname());
         Bukkit.getPluginManager().callEvent(event);
         if (event.isCancelled()) {
-            context.send(sender, "<red>Nickname change was cancelled by another plugin.");
+            context.message(sender, "nickname.cancelled", Map.of());
             return true;
         }
 
         context.playerData().setNickname(parsed.target().getUniqueId(), parsed.target().getName(), parsed.nickname());
         service.apply(parsed.target(), parsed.nickname());
-        context.send(sender, "<green>Nickname set for <white>" + parsed.target().getName() + "<green>.");
+        context.message(sender, "nickname.set", Map.of("target", parsed.target().getName(), "nickname", parsed.nickname()));
         if (!sender.equals(parsed.target())) {
-            context.send(parsed.target(), "<green>Your nickname was changed to <white>" + parsed.nickname() + "<green>.");
+            context.message(parsed.target(), "nickname.changed-notice", Map.of("nickname", parsed.nickname()));
+        }
+        return true;
+    }
+
+    private boolean nameplate(CommandSender sender, String label, List<String> args) {
+        if (!context.requirePermission(sender, "hydroxide.command.nameplate")) {
+            return true;
+        }
+        Optional<NameplateCommandParser.Request> parsed = NameplateCommandParser.parse(args);
+        if (parsed.isEmpty()) {
+            context.message(sender, "nickname.nameplate.usage", Map.of("label", label));
+            return true;
+        }
+        NameplateCommandParser.Request request = parsed.orElseThrow();
+        Player target = nameplateTarget(sender, request);
+        if (target == null) {
+            return true;
+        }
+
+        if (request.reset()) {
+            nameplateStore.remove(target.getUniqueId());
+            nameplateStore.save(nameplateYaml);
+            service.resetNameplate(target);
+            if (!request.silent()) {
+                context.message(sender, "nickname.nameplate.reset", Map.of("target", target.getName()));
+            }
+            return true;
+        }
+
+        NicknameService.NameplateState state = nameplateStore.get(target.getUniqueId())
+                .map(NameplateStore.StoredNameplate::state)
+                .orElseGet(NicknameService.NameplateState::emptyState);
+        if (request.prefix().isPresent()) {
+            state = state.withPrefix(request.prefix().orElseThrow());
+        }
+        if (request.suffix().isPresent()) {
+            state = state.withSuffix(request.suffix().orElseThrow());
+        }
+        if (request.colorProvided()) {
+            state = request.color().isPresent()
+                    ? state.withColor(request.color().orElseThrow())
+                    : state.withoutColor();
+        }
+
+        nameplateStore.put(target.getUniqueId(), target.getName(), state);
+        nameplateStore.save(nameplateYaml);
+        service.applyNameplate(target, state);
+        if (!request.silent()) {
+            Map<String, Object> placeholders = Map.of(
+                    "target", target.getName(),
+                    "prefix", state.prefix().isBlank() ? "none" : state.prefix(),
+                    "suffix", state.suffix().isBlank() ? "none" : state.suffix(),
+                    "color", state.color().map(NameplateCommandParser::colorName).orElse("default")
+            );
+            context.message(sender, "nickname.nameplate.updated", placeholders);
+            if (!sender.equals(target)) {
+                context.message(target, "nickname.nameplate.target-notice", placeholders);
+            }
         }
         return true;
     }
@@ -157,22 +264,42 @@ public final class NicknameModule implements HydroModule, Listener, CommandExecu
             return true;
         }
         if (args.length == 0) {
-            context.send(sender, "<red>Usage: /" + label + " <nickname>");
+            context.message(sender, "nickname.realname.usage", Map.of("label", label));
             return true;
         }
         String nickname = CommandUtils.joinArgs(args, 0);
         service.realName(nickname)
                 .ifPresentOrElse(
-                        realName -> context.send(sender, "<green>That nickname belongs to <white>" + realName + "<green>."),
-                        () -> context.send(sender, "<red>No active nickname matched <white>" + nickname + "<red>.")
+                        realName -> context.message(sender, "nickname.realname.found", Map.of("player", realName, "nickname", nickname)),
+                        () -> context.message(sender, "nickname.realname.missing", Map.of("nickname", nickname))
                 );
         return true;
+    }
+
+    private Player nameplateTarget(CommandSender sender, NameplateCommandParser.Request request) {
+        if (request.targetName().isPresent()) {
+            Player target = CommandUtils.onlinePlayer(request.targetName().orElseThrow()).orElse(null);
+            if (target == null) {
+                context.message(sender, "nickname.target-offline", Map.of());
+            }
+            return target;
+        }
+        if (sender instanceof Player player) {
+            return player;
+        }
+        context.message(sender, "nickname.console-target-required", Map.of());
+        return null;
+    }
+
+    private void applyStoredDisplay(Player player) {
+        context.playerData().nickname(player.getUniqueId()).ifPresent(nickname -> service.apply(player, nickname));
+        nameplateStore.get(player.getUniqueId()).ifPresent(nameplate -> service.applyNameplate(player, nameplate.state()));
     }
 
     private TargetAndNickname parseTarget(CommandSender sender, String[] args) {
         Player self = sender instanceof Player player ? player : null;
         if (self == null && args.length < 2) {
-            context.send(sender, "<red>Console must specify a player.");
+            context.message(sender, "nickname.console-target-required", Map.of());
             return null;
         }
 
@@ -181,14 +308,14 @@ public final class NicknameModule implements HydroModule, Listener, CommandExecu
                 && (sender.hasPermission("hydroxide.command.nickname.others") || self == null);
         if (usingOtherTarget) {
             if (!sender.hasPermission("hydroxide.command.nickname.others") && self != null) {
-                context.send(sender, "<red>You do not have permission to nickname other players.");
+                context.message(sender, "nickname.others-denied", Map.of());
                 return null;
             }
             return new TargetAndNickname(possibleTarget, CommandUtils.joinArgs(args, 1));
         }
 
         if (self == null) {
-            context.send(sender, "<red>That player is not online.");
+            context.message(sender, "nickname.target-offline", Map.of());
             return null;
         }
         return new TargetAndNickname(self, CommandUtils.joinArgs(args, 0));
@@ -205,22 +332,22 @@ public final class NicknameModule implements HydroModule, Listener, CommandExecu
     private boolean canUseFormatting(CommandSender sender, String nickname) {
         if (NicknameService.requiresRainbowPermission(nickname)
                 && !sender.hasPermission("hydroxide.nickname.rainbow")) {
-            context.send(sender, "<red>You need <white>hydroxide.nickname.rainbow <red>to use rainbow nicknames.");
+            context.message(sender, "nickname.permission.rainbow", Map.of());
             return false;
         }
         if (NicknameService.requiresGradientPermission(nickname)
                 && !sender.hasPermission("hydroxide.nickname.gradient")) {
-            context.send(sender, "<red>You need <white>hydroxide.nickname.gradient <red>to use gradient nicknames.");
+            context.message(sender, "nickname.permission.gradient", Map.of());
             return false;
         }
         if (NicknameService.requiresHexPermission(nickname)
                 && !sender.hasPermission("hydroxide.nickname.hex")) {
-            context.send(sender, "<red>You need <white>hydroxide.nickname.hex <red>to use hex nicknames.");
+            context.message(sender, "nickname.permission.hex", Map.of());
             return false;
         }
         if (NicknameService.requiresColorPermission(nickname)
                 && !sender.hasPermission("hydroxide.nickname.color")) {
-            context.send(sender, "<red>You need <white>hydroxide.nickname.color <red>to use colored nicknames.");
+            context.message(sender, "nickname.permission.color", Map.of());
             return false;
         }
         return true;

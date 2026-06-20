@@ -2,6 +2,8 @@ package net.axther.hydroxide.modules.spawn;
 
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.StoredLocation;
 import net.axther.hydroxide.storage.YamlStore;
@@ -12,10 +14,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.EntityType;
@@ -34,10 +32,11 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-public final class AdvancedSpawnModule implements HydroModule, Listener, CommandExecutor, TabCompleter {
+public final class AdvancedSpawnModule implements HydroModule, Listener {
 
     private HydroxideContext context;
     private YamlStore spawnStore;
@@ -72,21 +71,34 @@ public final class AdvancedSpawnModule implements HydroModule, Listener, Command
         RegisteredServiceProvider<Permission> provider = Bukkit.getServicesManager().getRegistration(Permission.class);
         this.permissions = provider == null ? null : provider.getProvider();
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("groupspawn", this);
+        context.commands().register("groupspawn", groupSpawnCommand());
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.groupspawn")) {
-            return true;
-        }
-        if (!(sender instanceof Player player)) {
-            context.send(sender, "<red>Only players can set group spawns.");
-            return true;
-        }
+    private CommandService groupSpawnCommand() {
+        return new CommandService(HydroCommand.builder("groupspawn")
+                .permission("hydroxide.command.groupspawn")
+                .playerOnly(true)
+                .usage("/{label} <set|delete> <group> [priority]")
+                .executor(ctx -> groupSpawn((Player) ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(ctx -> {
+                    if (ctx.arguments().size() == 1) {
+                        return CommandUtils.matching(ctx.argument(0), List.of("delete", "set"));
+                    }
+                    if (ctx.arguments().size() == 2) {
+                        return CommandUtils.matching(ctx.argument(1), groupNames());
+                    }
+                    if (ctx.arguments().size() == 3 && ctx.argument(0).equalsIgnoreCase("set")) {
+                        return CommandUtils.matching(ctx.argument(2), List.of("0", "10", "50", "100"));
+                    }
+                    return List.of();
+                })
+                .build(), context.messages());
+    }
+
+    private void groupSpawn(Player player, String label, String[] args) {
         if (args.length < 2 || (!args[0].equalsIgnoreCase("set") && !args[0].equalsIgnoreCase("delete"))) {
-            context.send(sender, "<red>Usage: /" + label + " <set|delete> <group> [priority]");
-            return true;
+            context.message(player, "spawn.group.usage", Map.of("label", label));
+            return;
         }
 
         String group = args[1].toLowerCase(Locale.ROOT);
@@ -94,8 +106,8 @@ public final class AdvancedSpawnModule implements HydroModule, Listener, Command
         if (args[0].equalsIgnoreCase("delete")) {
             yaml.set("groups." + group, null);
             spawnStore.save(yaml);
-            context.send(sender, "<green>Deleted spawn group <white>" + group + "<green>.");
-            return true;
+            context.message(player, "spawn.group.deleted", Map.of("group", group));
+            return;
         }
 
         int priority = args.length >= 3 ? parseInt(args[2], 0) : 0;
@@ -103,22 +115,7 @@ public final class AdvancedSpawnModule implements HydroModule, Listener, Command
         section.set("priority", priority);
         StoredLocation.from(player.getLocation()).writeTo(section.createSection("location"));
         spawnStore.save(yaml);
-        context.send(sender, "<green>Set spawn group <white>" + group + " <green>with priority <white>" + priority + "<green>.");
-        return true;
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return CommandUtils.matching(args[0], List.of("delete", "set"));
-        }
-        if (args.length == 2) {
-            return CommandUtils.matching(args[1], groupNames());
-        }
-        if (args.length == 3 && args[0].equalsIgnoreCase("set")) {
-            return CommandUtils.matching(args[2], List.of("0", "10", "50", "100"));
-        }
-        return List.of();
+        context.message(player, "spawn.group.set", Map.of("group", group, "priority", priority));
     }
 
     @EventHandler
@@ -183,8 +180,8 @@ public final class AdvancedSpawnModule implements HydroModule, Listener, Command
     }
 
     private void runFirstJoinActions(Player player) {
-        String title = context.plugin().getConfig().getString("first-join.title", "<#44CCFF><bold>Welcome</bold>");
-        String subtitle = context.plugin().getConfig().getString("first-join.subtitle", "<gray>Enjoy your stay, <white>{player}<gray>!");
+        String title = firstJoinTemplate("title", "spawn.first-join.title");
+        String subtitle = firstJoinTemplate("subtitle", "spawn.first-join.subtitle");
         player.showTitle(Title.title(
                 context.text().format(title.replace("{player}", player.getName())),
                 context.text().format(subtitle.replace("{player}", player.getName())),
@@ -199,6 +196,14 @@ public final class AdvancedSpawnModule implements HydroModule, Listener, Command
             firework.detonate();
         }
         giveStarterItems(player);
+    }
+
+    private String firstJoinTemplate(String configKey, String messageKey) {
+        String path = "first-join." + configKey;
+        if (context.plugin().getConfig().isString(path)) {
+            return context.plugin().getConfig().getString(path, "");
+        }
+        return context.messages().template(messageKey, "");
     }
 
     private void giveStarterItems(Player player) {

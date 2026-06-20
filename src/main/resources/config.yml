@@ -1,7 +1,3 @@
-messages:
-  prefix: "<#44CCFF><bold>Hydroxide</bold> <dark_gray>> <gray>"
-  no-permission: "<red>You do not have permission."
-
 modules:
   core:
     enabled: true
@@ -14,6 +10,8 @@ modules:
   chat:
     enabled: true
   teleport:
+    enabled: true
+  environment:
     enabled: true
   advanced-spawn:
     enabled: true
@@ -55,6 +53,12 @@ modules:
     enabled: true
   social:
     enabled: true
+  mail:
+    enabled: true
+  maintenance:
+    enabled: true
+  user-meta:
+    enabled: true
   worlds:
     enabled: true
   backups:
@@ -81,8 +85,61 @@ modules:
     enabled: true
   vanish:
     enabled: true
-  moderation:
-    enabled: true
+moderation:
+  enabled: true
+
+environment:
+  default-weather-duration-seconds: 600
+
+admin-utilities:
+  counter:
+    default-seconds: 10
+    max-seconds: 300
+    default-range: 30.0
+    max-range: 250.0
+    default-message: "<#44CCFF>Counter"
+  spawnmob:
+    max-amount: 10
+    require-type-permission: false
+  spawner:
+    max-distance: 64
+    require-type-permission: false
+  tree:
+    max-distance: 64
+  break:
+    max-distance: 64
+  antioch:
+    fuse-ticks: 60
+    power: 1.2
+  kittycannon:
+    fuse-ticks: 40
+    velocity: 1.6
+    explosion-power: 2.0
+    break-blocks: false
+  beezooka:
+    fuse-ticks: 40
+    velocity: 1.6
+    explosion-power: 2.0
+    break-blocks: false
+  nuke:
+    amount: 12
+    radius: 5.0
+    height: 16.0
+    fuse-ticks: 80
+  launch:
+    default-power: 2.0
+    no-damage-seconds: 10
+  findbiome:
+    default-radius: 6400
+    max-radius: 20000
+    horizontal-resolution: 32
+    vertical-resolution: 64
+  lastonline:
+    page-size: 10
+
+worlds:
+  unloadchunks:
+    batch-size: 25
 
 storage:
   type: "sqlite"
@@ -102,10 +159,31 @@ storage:
     idle-timeout-ms: 600000
     max-lifetime-ms: 1800000
 
+help:
+  page-size: 8
+
+command-control:
+  disabled-commands: []
+  disabled-message: ""
+  command-permissions: {}
+  command-costs: {}
+  command-warmups: {}
+  command-cooldowns: {}
+  command-cooldown-persistence: true
+  command-worlds: {}
+  command-aliases: {}
+
 chat:
   allow-player-color-codes: true
   format: "<dark_gray>[<#44CCFF>{world}</#44CCFF>] <white>{name}<dark_gray>: <white>{message}"
   broadcast-format: "<#FFB000><bold>Broadcast</bold> <dark_gray>> <white>{message}"
+  mutechat:
+    default-duration: "1h"
+  command-spy:
+    excluded-prefixes:
+      - "login"
+      - "register"
+      - "changepassword"
 
 teleport:
   request-timeout-seconds: 120
@@ -116,14 +194,13 @@ navigation:
   warmup-seconds: 3
 
 first-join:
-  title: "<#44CCFF><bold>Welcome</bold>"
-  subtitle: "<gray>Enjoy your stay, <white>{player}<gray>!"
   firework: true
   items:
     - "BREAD:16"
     - "STONE_SWORD:1"
 
 jail:
+  default-duration-seconds: 300
   allowed-commands:
     - "/help"
     - "/rules"
@@ -171,6 +248,9 @@ vanish:
 debug:
   visibility: false
 
+maintenance:
+  default-message: "Server is currently in maintenance mode. Please try again later."
+
 redis-bridge:
   enabled: false
   server-id: "server"
@@ -179,10 +259,15 @@ redis-bridge:
   password: ""
   channel: "hydroxide:chat"
 
+proxy:
+  servers: []
+
 economy:
   starting-balance: 100.0
   currency-symbol: "$"
   currency-name: "dollars"
+  cheques:
+    signing-secret: ""
 
 nickname:
   max-length: 16

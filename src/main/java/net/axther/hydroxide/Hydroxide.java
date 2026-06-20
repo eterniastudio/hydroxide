@@ -1,6 +1,7 @@
 package net.axther.hydroxide;
 
 import net.axther.hydroxide.commands.CommandRegistrar;
+import net.axther.hydroxide.messages.MessageService;
 import net.axther.hydroxide.modules.ModuleConfig;
 import net.axther.hydroxide.modules.ModuleManager;
 import net.axther.hydroxide.modules.afk.AfkModule;
@@ -18,11 +19,14 @@ import net.axther.hydroxide.modules.chat.ChatModule;
 import net.axther.hydroxide.modules.combat.CombatTagModule;
 import net.axther.hydroxide.modules.core.CoreModule;
 import net.axther.hydroxide.modules.economy.EconomyModule;
+import net.axther.hydroxide.modules.environment.EnvironmentModule;
 import net.axther.hydroxide.modules.integration.PlaceholderIntegrationModule;
 import net.axther.hydroxide.modules.interaction.InteractionModule;
 import net.axther.hydroxide.modules.item.ItemEditorModule;
 import net.axther.hydroxide.modules.jail.JailModule;
 import net.axther.hydroxide.modules.kit.KitModule;
+import net.axther.hydroxide.modules.mail.MailModule;
+import net.axther.hydroxide.modules.maintenance.MaintenanceModule;
 import net.axther.hydroxide.modules.motd.MotdModule;
 import net.axther.hydroxide.modules.navigation.NavigationModule;
 import net.axther.hydroxide.modules.moderation.ModerationModule;
@@ -41,6 +45,7 @@ import net.axther.hydroxide.modules.stats.StatsModule;
 import net.axther.hydroxide.modules.tablist.TablistModule;
 import net.axther.hydroxide.modules.teleport.TeleportModule;
 import net.axther.hydroxide.modules.utility.UtilityBindingModule;
+import net.axther.hydroxide.modules.usermeta.UserMetaModule;
 import net.axther.hydroxide.modules.welcome.WelcomeModule;
 import net.axther.hydroxide.modules.world.WorldManagerModule;
 import net.axther.hydroxide.storage.NamedLocationStore;
@@ -61,10 +66,16 @@ public final class Hydroxide extends JavaPlugin {
     public void onEnable() {
         saveDefaultConfig();
 
+        TextFormatter text = new TextFormatter();
+        File messagesFile = new File(getDataFolder(), "messages.yml");
+        if (!messagesFile.exists()) {
+            saveResource("messages.yml", false);
+        }
         moduleManager = new ModuleManager(ModuleConfig.fromConfiguration(getConfig()));
         context = new HydroxideContext(
                 this,
-                new TextFormatter(),
+                text,
+                MessageService.fromFile(text, messagesFile),
                 new CommandRegistrar(this),
                 moduleManager,
                 PlayerDataStores.create(this),
@@ -81,6 +92,7 @@ public final class Hydroxide extends JavaPlugin {
         moduleManager.register(new PlaceholderIntegrationModule());
         moduleManager.register(new ChatModule());
         moduleManager.register(new TeleportModule());
+        moduleManager.register(new EnvironmentModule());
         moduleManager.register(new AdvancedSpawnModule());
         moduleManager.register(new WelcomeModule());
         moduleManager.register(new NavigationModule());
@@ -101,6 +113,9 @@ public final class Hydroxide extends JavaPlugin {
         moduleManager.register(new ProxyBridgeModule());
         moduleManager.register(new ChatChannelsModule());
         moduleManager.register(new SocialModule());
+        moduleManager.register(new MailModule());
+        moduleManager.register(new MaintenanceModule());
+        moduleManager.register(new UserMetaModule());
         moduleManager.register(new WorldManagerModule());
         moduleManager.register(new BackupModule());
         moduleManager.register(new KitModule());

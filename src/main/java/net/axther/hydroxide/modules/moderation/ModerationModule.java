@@ -23,7 +23,7 @@ public final class ModerationModule implements HydroModule {
 
     @Override
     public String description() {
-        return "Quality-of-life moderation commands: fly, god, heal, feed, speed, and gamemode.";
+        return "Quality-of-life moderation commands: fly, god, heal, feed, speed, gamemode, effects, air, and discipline inspection.";
     }
 
     @Override
@@ -35,8 +35,8 @@ public final class ModerationModule implements HydroModule {
     public void onEnable(HydroxideContext context) {
         commands = new ModerationCommands(context);
         Bukkit.getPluginManager().registerEvents(commands, context.plugin());
-        for (String command : List.of("fly", "god", "heal", "feed", "speed", "gamemode")) {
-            context.commands().register(command, commands);
+        for (String command : ModerationCommandCatalog.commands()) {
+            context.commands().register(command, commands.command(command));
         }
     }
 

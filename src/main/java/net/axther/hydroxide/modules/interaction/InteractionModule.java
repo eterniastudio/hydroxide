@@ -2,9 +2,11 @@ package net.axther.hydroxide.modules.interaction;
 
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandContext;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.YamlStore;
-import net.kyori.adventure.text.Component;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -12,10 +14,6 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.Sign;
 import org.bukkit.block.sign.Side;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Entity;
@@ -38,7 +36,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-public final class InteractionModule implements HydroModule, Listener, CommandExecutor, TabCompleter {
+public final class InteractionModule implements HydroModule, Listener {
+
+    private static final List<String> EXECUTION_MODES = List.of("console", "player");
+    private static final List<String> MONEY_SAMPLES = List.of("0", "1", "5", "10", "25", "100");
+    private static final List<String> COOLDOWN_SAMPLES = List.of("0", "5", "10", "30", "60", "300");
 
     private HydroxideContext context;
     private YamlStore store;
@@ -70,8 +72,8 @@ public final class InteractionModule implements HydroModule, Listener, CommandEx
         this.context = context;
         this.store = new YamlStore(new File(context.plugin().getDataFolder(), "bindings.yml"));
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("bindcommand", this);
-        context.commands().register("bindentity", this);
+        context.commands().register("bindcommand", bindCommand("bindcommand", false));
+        context.commands().register("bindentity", bindCommand("bindentity", true));
     }
 
     @Override
@@ -79,53 +81,48 @@ public final class InteractionModule implements HydroModule, Listener, CommandEx
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!context.requirePermission(sender, "hydroxide.command.bindcommand")) {
-            return true;
-        }
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can create interaction bindings.");
-            return true;
-        }
-        if (args.length < 4) {
-            context.send(sender, "<red>Usage: /" + label + " <console|player> <cost> <cooldown> <command>");
-            return true;
-        }
-        CommandBinding binding = new CommandBinding(
-                args[0].equalsIgnoreCase("console") ? CommandBinding.ExecutionMode.CONSOLE : CommandBinding.ExecutionMode.PLAYER,
-                CommandUtils.joinArgs(args, 3),
-                parseDouble(args[1], 0.0D),
-                Math.max(0, parseInt(args[2], 0))
-        );
-        if (command.getName().equalsIgnoreCase("bindentity")) {
-            Entity entity = player.getNearbyEntities(5.0D, 5.0D, 5.0D).stream().findFirst().orElse(null);
-            if (entity == null) {
-                context.send(player, "<red>No nearby entity found.");
-                return true;
-            }
-            entity.getPersistentDataContainer().set(key(), PersistentDataType.STRING, encode(binding));
-            context.send(player, "<green>Bound command to nearby entity.");
-            return true;
-        }
-        pendingBlockBindings.put(player.getUniqueId(), binding);
-        context.send(player, "<green>Right-click a sign, button, pressure plate, or block to bind this command.");
-        return true;
+    private CommandService bindCommand(String name, boolean entityBinding) {
+        return new CommandService(HydroCommand.builder(name)
+                .permission("hydroxide.command.bindcommand")
+                .playerOnly(true)
+                .usage("/{label} <console|player> <cost> <cooldown> <command>")
+                .executor(ctx -> bind((Player) ctx.sender(), ctx.label(), ctx.arguments(), entityBinding))
+                .completer(this::bindCompletions)
+                .build(), context.messages());
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return CommandUtils.matching(args[0], List.of("console", "player"));
+    private List<String> bindCompletions(CommandContext ctx) {
+        return switch (ctx.arguments().size()) {
+            case 1 -> CommandUtils.matching(ctx.argument(0), EXECUTION_MODES);
+            case 2 -> CommandUtils.matching(ctx.argument(1), MONEY_SAMPLES);
+            case 3 -> CommandUtils.matching(ctx.argument(2), COOLDOWN_SAMPLES);
+            default -> List.of();
+        };
+    }
+
+    private void bind(Player player, String label, List<String> args, boolean entityBinding) {
+        if (args.size() < 4) {
+            context.message(player, "interactions.bind.usage", Map.of("label", label));
+            return;
         }
-        if (args.length == 2) {
-            return CommandUtils.matching(args[1], List.of("0", "1", "5", "10", "25", "100"));
+        CommandBinding binding = new CommandBinding(
+                args.get(0).equalsIgnoreCase("console") ? CommandBinding.ExecutionMode.CONSOLE : CommandBinding.ExecutionMode.PLAYER,
+                joinArgs(args, 3),
+                parseDouble(args.get(1), 0.0D),
+                Math.max(0, parseInt(args.get(2), 0))
+        );
+        if (entityBinding) {
+            Entity entity = player.getNearbyEntities(5.0D, 5.0D, 5.0D).stream().findFirst().orElse(null);
+            if (entity == null) {
+                context.message(player, "interactions.bind.entity-missing", Map.of());
+                return;
+            }
+            entity.getPersistentDataContainer().set(key(), PersistentDataType.STRING, encode(binding));
+            context.message(player, "interactions.bind.entity-bound", Map.of());
+            return;
         }
-        if (args.length == 3) {
-            return CommandUtils.matching(args[2], List.of("0", "5", "10", "30", "60", "300"));
-        }
-        return List.of();
+        pendingBlockBindings.put(player.getUniqueId(), binding);
+        context.message(player, "interactions.bind.block-pending", Map.of());
     }
 
     @EventHandler
@@ -134,10 +131,10 @@ public final class InteractionModule implements HydroModule, Listener, CommandEx
             return;
         }
         if (!event.getPlayer().hasPermission("hydroxide.command.bindcommand")) {
-            event.line(0, context.text().format("<red>[Denied]"));
+            event.line(0, context.messages().component("interactions.sign.denied-header", Map.of()));
             return;
         }
-        event.line(0, context.text().format("<#44CCFF>[Command]"));
+        event.line(0, context.messages().component("interactions.sign.command-header", Map.of()));
     }
 
     @EventHandler
@@ -149,7 +146,7 @@ public final class InteractionModule implements HydroModule, Listener, CommandEx
         CommandBinding pending = pendingBlockBindings.remove(event.getPlayer().getUniqueId());
         if (pending != null) {
             saveBlockBinding(block, pending);
-            context.send(event.getPlayer(), "<green>Bound command to block.");
+            context.message(event.getPlayer(), "interactions.bind.block-bound", Map.of());
             event.setCancelled(true);
             return;
         }
@@ -201,7 +198,7 @@ public final class InteractionModule implements HydroModule, Listener, CommandEx
         String cooldownKey = player.getUniqueId() + ":" + targetKey;
         long last = cooldowns.getOrDefault(cooldownKey, 0L);
         if (!binding.readyAt(last, now)) {
-            context.send(player, "<red>That interaction is on cooldown.");
+            context.message(player, "interactions.execute.cooldown", Map.of());
             return;
         }
         if (binding.cost() > 0.0D) {
@@ -209,7 +206,7 @@ public final class InteractionModule implements HydroModule, Listener, CommandEx
                     .map(economy -> economy.withdrawPlayer(player, binding.cost()))
                     .orElse(null);
             if (response == null || !response.transactionSuccess()) {
-                context.send(player, "<red>You cannot afford that interaction.");
+                context.message(player, "interactions.execute.cannot-afford", Map.of("cost", binding.cost()));
                 return;
             }
         }
@@ -244,6 +241,13 @@ public final class InteractionModule implements HydroModule, Listener, CommandEx
         String payload = binding.mode().name() + "|" + binding.cost() + "|" + binding.cooldownSeconds() + "|"
                 + Base64.getEncoder().encodeToString(binding.command().getBytes(StandardCharsets.UTF_8));
         return payload;
+    }
+
+    private String joinArgs(List<String> args, int startIndex) {
+        if (startIndex >= args.size()) {
+            return "";
+        }
+        return String.join(" ", args.subList(startIndex, args.size()));
     }
 
     private CommandBinding decode(String payload) {

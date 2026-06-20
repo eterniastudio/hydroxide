@@ -2,15 +2,13 @@ package net.axther.hydroxide.modules.backpack;
 
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CompletionUtils;
-import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandContext;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
@@ -31,9 +29,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
-public final class BackpackModule implements HydroModule, Listener, CommandExecutor, TabCompleter {
-
-    private static final String TITLE_PREFIX = "Hydroxide Vault ";
+public final class BackpackModule implements HydroModule, Listener {
 
     private HydroxideContext context;
     private BackpackSizePolicy policy;
@@ -67,8 +63,9 @@ public final class BackpackModule implements HydroModule, Listener, CommandExecu
                 context.plugin().getConfig().getInt("backpacks.max-slots", 54)
         );
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("backpack", this);
-        context.commands().register("pv", this);
+        context.commands().register("backpack", command("backpack", "hydroxide.command.backpack", ctx -> open((Player) ctx.sender(), 1), null));
+        context.commands().register("pv", command("pv", "hydroxide.command.pv",
+                ctx -> open((Player) ctx.sender(), Math.max(1, parseInt(ctx.argument(0), 1))), this::vaultCompletions));
     }
 
     @Override
@@ -76,30 +73,22 @@ public final class BackpackModule implements HydroModule, Listener, CommandExecu
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can open backpacks.");
-            return true;
-        }
-        if (!context.requirePermission(sender, command.getName().equalsIgnoreCase("pv")
-                ? "hydroxide.command.pv"
-                : "hydroxide.command.backpack")) {
-            return true;
-        }
-        int vault = command.getName().equalsIgnoreCase("pv") && args.length > 0 ? parseInt(args[0], 1) : 1;
-        open(player, Math.max(1, vault));
-        return true;
+    private CommandService command(String name, String permission, HydroCommand.HydroCommandExecutor executor,
+                                   HydroCommand.HydroTabCompleter completer) {
+        return new CommandService(HydroCommand.builder(name)
+                .permission(permission)
+                .playerOnly(true)
+                .usage("/{label} [number]")
+                .executor(executor)
+                .completer(completer)
+                .build(), context.messages());
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (command.getName().equalsIgnoreCase("pv") && args.length == 1) {
-            int maxVaults = context == null ? 3 : context.plugin().getConfig().getInt("backpacks.max-vaults", 3);
-            return CompletionUtils.integerRange(args[0], 1, Math.max(1, maxVaults));
-        }
-        return List.of();
+    private List<String> vaultCompletions(CommandContext ctx) {
+        int maxVaults = context == null ? 3 : context.plugin().getConfig().getInt("backpacks.max-vaults", 3);
+        return ctx.arguments().size() == 1
+                ? CompletionUtils.integerRange(ctx.argument(0), 1, Math.max(1, maxVaults))
+                : List.of();
     }
 
     @EventHandler
@@ -137,7 +126,7 @@ public final class BackpackModule implements HydroModule, Listener, CommandExecu
 
     private void open(Player player, int vault) {
         int slots = policy.slotsFor(permissions(player));
-        Inventory inventory = Bukkit.createInventory(player, slots, context.text().format(TITLE_PREFIX + vault));
+        Inventory inventory = Bukkit.createInventory(player, slots, context.messages().component("backpacks.title", Map.of("vault", vault)));
         ItemStack[] saved = load(player, vault, slots);
         inventory.setContents(saved);
         openVaults.put(player.getUniqueId(), vault);
@@ -160,7 +149,8 @@ public final class BackpackModule implements HydroModule, Listener, CommandExecu
             ItemStack[] saved = ItemStack.deserializeItemsFromBytes(Base64.getDecoder().decode(encoded));
             System.arraycopy(saved, 0, contents, 0, Math.min(size, saved.length));
         } catch (RuntimeException exception) {
-            context.plugin().getLogger().warning("Unable to read backpack data for " + player.getName() + ": " + exception.getMessage());
+            context.plugin().getLogger().warning(context.text().plain(context.messages().component("backpacks.load-failed-log",
+                    Map.of("player", player.getName(), "reason", exception.getMessage()))));
         }
         return contents;
     }
@@ -170,7 +160,8 @@ public final class BackpackModule implements HydroModule, Listener, CommandExecu
             PersistentDataContainer pdc = player.getPersistentDataContainer();
             pdc.set(key(vault), PersistentDataType.STRING, Base64.getEncoder().encodeToString(ItemStack.serializeItemsAsBytes(contents)));
         } catch (RuntimeException exception) {
-            context.plugin().getLogger().warning("Unable to save backpack data for " + player.getName() + ": " + exception.getMessage());
+            context.plugin().getLogger().warning(context.text().plain(context.messages().component("backpacks.save-failed-log",
+                    Map.of("player", player.getName(), "reason", exception.getMessage()))));
         }
     }
 

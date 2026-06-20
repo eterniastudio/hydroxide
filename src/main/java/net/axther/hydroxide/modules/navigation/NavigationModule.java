@@ -1,7 +1,8 @@
 package net.axther.hydroxide.modules.navigation;
 
 import net.axther.hydroxide.HydroxideContext;
-import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.StoredLocation;
 import net.kyori.adventure.text.Component;
@@ -10,9 +11,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.World;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -32,10 +30,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-public final class NavigationModule implements HydroModule, Listener, CommandExecutor {
+public final class NavigationModule implements HydroModule, Listener {
 
-    private static final String HOMES_TITLE = "Hydroxide Homes";
-    private static final String WARPS_TITLE = "Hydroxide Warps";
     private HydroxideContext context;
     private final Map<UUID, Warmup> warmups = new HashMap<>();
 
@@ -63,8 +59,8 @@ public final class NavigationModule implements HydroModule, Listener, CommandExe
     public void onEnable(HydroxideContext context) {
         this.context = context;
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("homesgui", this);
-        context.commands().register("warpgui", this);
+        context.commands().register("homesgui", command("homesgui", "hydroxide.command.homesgui", player -> player.openInventory(homeInventory(player))));
+        context.commands().register("warpgui", command("warpgui", "hydroxide.command.warpgui", player -> player.openInventory(warpInventory())));
     }
 
     @Override
@@ -73,25 +69,13 @@ public final class NavigationModule implements HydroModule, Listener, CommandExe
         warmups.clear();
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can use navigation menus.");
-            return true;
-        }
-        if (command.getName().equalsIgnoreCase("homesgui")) {
-            if (!context.requirePermission(sender, "hydroxide.command.homesgui")) {
-                return true;
-            }
-            player.openInventory(homeInventory(player));
-            return true;
-        }
-        if (!context.requirePermission(sender, "hydroxide.command.warpgui")) {
-            return true;
-        }
-        player.openInventory(warpInventory());
-        return true;
+    private CommandService command(String name, String permission, java.util.function.Consumer<Player> executor) {
+        return new CommandService(HydroCommand.builder(name)
+                .permission(permission)
+                .playerOnly(true)
+                .usage("/{label}")
+                .executor(ctx -> executor.accept((Player) ctx.sender()))
+                .build(), context.messages());
     }
 
     @EventHandler
@@ -100,7 +84,7 @@ public final class NavigationModule implements HydroModule, Listener, CommandExe
             return;
         }
         String title = context.text().plain(event.getView().title());
-        if (!title.equals(HOMES_TITLE) && !title.equals(WARPS_TITLE)) {
+        if (!title.equals(homesTitle()) && !title.equals(warpsTitle())) {
             return;
         }
         event.setCancelled(true);
@@ -109,11 +93,11 @@ public final class NavigationModule implements HydroModule, Listener, CommandExe
             return;
         }
         String name = context.text().plain(item.getItemMeta().displayName());
-        Optional<StoredLocation> location = title.equals(HOMES_TITLE)
+        Optional<StoredLocation> location = title.equals(homesTitle())
                 ? context.playerData().home(player.getUniqueId(), name)
                 : context.warps().get(name);
         location.ifPresent(stored -> startWarmup(player, stored));
-        if (title.equals(HOMES_TITLE) && event.getClick() == ClickType.SHIFT_RIGHT) {
+        if (title.equals(homesTitle()) && event.getClick() == ClickType.SHIFT_RIGHT) {
             context.playerData().removeHome(player.getUniqueId(), name);
             player.openInventory(homeInventory(player));
         }
@@ -126,49 +110,51 @@ public final class NavigationModule implements HydroModule, Listener, CommandExe
             return;
         }
         if (warmup.origin().distanceSquared(event.getTo()) > 0.35D) {
-            cancelWarmup(event.getPlayer(), "<red>Teleport cancelled because you moved.");
+            cancelWarmup(event.getPlayer(), "navigation.warmup.cancelled-moved");
         }
     }
 
     @EventHandler
     public void onDamage(EntityDamageEvent event) {
         if (event.getEntity() instanceof Player player && warmups.containsKey(player.getUniqueId())) {
-            cancelWarmup(player, "<red>Teleport cancelled because you took damage.");
+            cancelWarmup(player, "navigation.warmup.cancelled-damaged");
         }
     }
 
     @EventHandler
     public void onBreak(BlockBreakEvent event) {
         if (warmups.containsKey(event.getPlayer().getUniqueId())) {
-            cancelWarmup(event.getPlayer(), "<red>Teleport cancelled because you broke a block.");
+            cancelWarmup(event.getPlayer(), "navigation.warmup.cancelled-block-break");
         }
     }
 
     private Inventory homeInventory(Player player) {
-        Inventory inventory = Bukkit.createInventory(null, 54, Component.text(HOMES_TITLE));
+        Inventory inventory = Bukkit.createInventory(null, 54, context.messages().component("navigation.homes-title", Map.of()));
         for (String home : context.playerData().homes(player.getUniqueId())) {
-            inventory.addItem(namedItem(Material.RED_BED, home, "<gray>Left click to teleport. Shift-right to delete."));
+            inventory.addItem(namedItem(Material.RED_BED, Component.text(home), context.messages().component("navigation.home-lore", Map.of())));
         }
         int limit = HomeLimitService.highestLimit(player::hasPermission,
                 context.plugin().getConfig().getInt("navigation.default-home-limit", 3),
                 context.plugin().getConfig().getInt("navigation.max-home-limit", 25));
-        inventory.setItem(53, namedItem(Material.COMPASS, "Limit: " + limit, "<gray>Current homes: " + context.playerData().homes(player.getUniqueId()).size()));
+        inventory.setItem(53, namedItem(Material.COMPASS,
+                context.messages().component("navigation.home-limit-name", Map.of("limit", limit)),
+                context.messages().component("navigation.home-limit-lore", Map.of("count", context.playerData().homes(player.getUniqueId()).size()))));
         return inventory;
     }
 
     private Inventory warpInventory() {
-        Inventory inventory = Bukkit.createInventory(null, 54, Component.text(WARPS_TITLE));
+        Inventory inventory = Bukkit.createInventory(null, 54, context.messages().component("navigation.warps-title", Map.of()));
         for (String warp : context.warps().names()) {
-            inventory.addItem(namedItem(Material.ENDER_PEARL, warp, "<gray>Click to warp."));
+            inventory.addItem(namedItem(Material.ENDER_PEARL, Component.text(warp), context.messages().component("navigation.warp-lore", Map.of())));
         }
         return inventory;
     }
 
-    private ItemStack namedItem(Material material, String name, String lore) {
+    private ItemStack namedItem(Material material, Component name, Component lore) {
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
-        meta.displayName(Component.text(name));
-        meta.lore(List.of(context.text().format(lore)));
+        meta.displayName(name);
+        meta.lore(List.of(lore));
         item.setItemMeta(meta);
         return item;
     }
@@ -182,18 +168,26 @@ public final class NavigationModule implements HydroModule, Listener, CommandExe
             toLocation(stored).ifPresent(location -> player.teleportAsync(location));
         }, Math.max(0, seconds) * 20L);
         warmups.put(player.getUniqueId(), new Warmup(origin, task));
-        context.send(player, "<green>Teleporting in <white>" + seconds + " <green>seconds. Do not move.");
+        context.message(player, "navigation.warmup.started", Map.of("seconds", seconds));
     }
 
-    private void cancelWarmup(Player player, String message) {
+    private void cancelWarmup(Player player, String messageKey) {
         Warmup warmup = warmups.remove(player.getUniqueId());
         if (warmup != null) {
             warmup.task().cancel();
             player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 0.7f, 0.5f);
-            if (message != null) {
-                context.send(player, message);
+            if (messageKey != null) {
+                context.message(player, messageKey, Map.of());
             }
         }
+    }
+
+    private String homesTitle() {
+        return context.text().plain(context.messages().component("navigation.homes-title", Map.of()));
+    }
+
+    private String warpsTitle() {
+        return context.text().plain(context.messages().component("navigation.warps-title", Map.of()));
     }
 
     private Optional<Location> toLocation(StoredLocation stored) {

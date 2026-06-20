@@ -2,14 +2,13 @@ package net.axther.hydroxide.modules.armorstand;
 
 import net.axther.hydroxide.HydroxideContext;
 import net.axther.hydroxide.commands.CommandUtils;
+import net.axther.hydroxide.commands.framework.CommandContext;
+import net.axther.hydroxide.commands.framework.CommandService;
+import net.axther.hydroxide.commands.framework.HydroCommand;
 import net.axther.hydroxide.modules.HydroModule;
 import net.axther.hydroxide.storage.YamlStore;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.TabCompleter;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.ArmorStand;
@@ -31,7 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
-public final class ArmorStandEditorModule implements HydroModule, Listener, CommandExecutor, TabCompleter {
+public final class ArmorStandEditorModule implements HydroModule, Listener {
 
     private static final List<String> ACTIONS = List.of(
             "arms", "baseplate", "copy", "equip", "glowing", "gravity", "invulnerable",
@@ -67,7 +66,7 @@ public final class ArmorStandEditorModule implements HydroModule, Listener, Comm
         this.context = context;
         this.store = new YamlStore(new File(context.plugin().getDataFolder(), "armorstands.yml"));
         Bukkit.getPluginManager().registerEvents(this, context.plugin());
-        context.commands().register("armorstand", this);
+        context.commands().register("armorstand", armorStandCommand());
     }
 
     @Override
@@ -75,28 +74,29 @@ public final class ArmorStandEditorModule implements HydroModule, Listener, Comm
         HandlerList.unregisterAll(this);
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        Player player = CommandUtils.playerSender(sender).orElse(null);
-        if (player == null) {
-            context.send(sender, "<red>Only players can edit armor stands.");
-            return true;
-        }
-        if (!context.requirePermission(sender, "hydroxide.armorstand.edit")) {
-            return true;
-        }
+    private CommandService armorStandCommand() {
+        return new CommandService(HydroCommand.builder("armorstand")
+                .permission("hydroxide.armorstand.edit")
+                .playerOnly(true)
+                .usage("/{label} <action> ...")
+                .executor(ctx -> armorStand((Player) ctx.sender(), ctx.label(), ctx.arguments().toArray(String[]::new)))
+                .completer(this::armorStandCompletions)
+                .build(), context.messages());
+    }
+
+    private void armorStand(Player player, String label, String[] args) {
         if (args.length == 0) {
-            context.send(sender, "<red>Usage: /" + label + " " + String.join("|", ACTIONS));
-            return true;
+            usage(player, label);
+            return;
         }
         ArmorStand stand = target(player);
         if (stand == null) {
-            context.send(player, "<red>Look at an armor stand within 8 blocks.");
-            return true;
+            context.message(player, "armorstand.target-required", Map.of());
+            return;
         }
         if (!canEdit(player, stand)) {
-            context.send(player, "<red>That armor stand is locked.");
-            return true;
+            context.message(player, "armorstand.locked", Map.of());
+            return;
         }
         String action = args[0].toLowerCase(Locale.ROOT);
         switch (action) {
@@ -116,32 +116,30 @@ public final class ArmorStandEditorModule implements HydroModule, Listener, Comm
             case "paste" -> {
                 ArmorStandSnapshot snapshot = clipboards.get(player.getUniqueId());
                 if (snapshot == null) {
-                    context.send(player, "<red>Your armor stand clipboard is empty.");
-                    return true;
+                    context.message(player, "armorstand.clipboard-empty", Map.of());
+                    return;
                 }
                 snapshot.apply(stand);
             }
             case "lock" -> lock(player, stand);
             case "unlock" -> unlock(stand);
             default -> {
-                context.send(player, "<red>Usage: /" + label + " " + String.join("|", ACTIONS));
-                return true;
+                usage(player, label);
+                return;
             }
         }
-        context.send(player, "<green>Armor stand updated.");
-        return true;
+        context.message(player, "armorstand.updated", Map.of());
     }
 
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        if (args.length == 1) {
-            return CommandUtils.matching(args[0], ACTIONS);
+    private List<String> armorStandCompletions(CommandContext ctx) {
+        if (ctx.arguments().size() == 1) {
+            return CommandUtils.matching(ctx.argument(0), ACTIONS);
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("equip")) {
-            return CommandUtils.matching(args[1], List.of("chest", "feet", "hand", "head", "legs", "off_hand"));
+        if (ctx.arguments().size() == 2 && ctx.argument(0).equalsIgnoreCase("equip")) {
+            return CommandUtils.matching(ctx.argument(1), List.of("chest", "feet", "hand", "head", "legs", "off_hand"));
         }
-        if (args.length == 2 && args[0].equalsIgnoreCase("pose")) {
-            return CommandUtils.matching(args[1], List.of("body", "head", "left_arm", "left_leg", "right_arm", "right_leg"));
+        if (ctx.arguments().size() == 2 && ctx.argument(0).equalsIgnoreCase("pose")) {
+            return CommandUtils.matching(ctx.argument(1), List.of("body", "head", "left_arm", "left_leg", "right_arm", "right_leg"));
         }
         return List.of();
     }
@@ -150,8 +148,12 @@ public final class ArmorStandEditorModule implements HydroModule, Listener, Comm
     public void onManipulate(PlayerArmorStandManipulateEvent event) {
         if (!canEdit(event.getPlayer(), event.getRightClicked())) {
             event.setCancelled(true);
-            context.send(event.getPlayer(), "<red>That armor stand is locked.");
+            context.message(event.getPlayer(), "armorstand.locked", Map.of());
         }
+    }
+
+    private void usage(Player player, String label) {
+        context.message(player, "armorstand.usage", Map.of("label", label, "actions", String.join("|", ACTIONS)));
     }
 
     private ArmorStand target(Player player) {
